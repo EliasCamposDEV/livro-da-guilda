@@ -74,15 +74,21 @@ public class PasswordResetService {
 
         User user = found.get();
         String token = generateToken();
+        String tokenHash = hashToken(token);
         Instant expiresAt = clock.instant().plus(tokenTtl);
-        user.startPasswordReset(hashToken(token), expiresAt);
+        user.startPasswordReset(tokenHash, expiresAt);
         userRepository.save(user);
 
         try {
             sender.send(user.getEmail(), token, expiresAt);
         } catch (RuntimeException ex) {
-            user.clearPasswordReset();
-            userRepository.save(user);
+            // Limpeza atomica e condicionada ao hash recem-gerado, para nao
+            // sobrescrever mudancas concorrentes (senha, tokenVersion, etc.).
+            Query cleanup = Query.query(Criteria.where("passwordResetTokenHash").is(tokenHash));
+            Update cleanupUpdate = new Update()
+                    .unset("passwordResetTokenHash")
+                    .unset("passwordResetExpiresAt");
+            mongoTemplate.updateFirst(cleanup, cleanupUpdate, User.class);
             throw new PasswordResetUnavailableException();
         }
 
@@ -99,8 +105,13 @@ public class PasswordResetService {
         Instant now = clock.instant();
         if (!user.isActive() || user.getPasswordResetExpiresAt() == null
                 || !user.getPasswordResetExpiresAt().isAfter(now)) {
-            user.clearPasswordReset();
-            userRepository.save(user);
+            // Limpeza atomica e condicionada ao hash do token, para nao
+            // sobrescrever mudancas concorrentes (senha, tokenVersion, etc.).
+            Query cleanup = Query.query(Criteria.where("passwordResetTokenHash").is(tokenHash));
+            Update cleanupUpdate = new Update()
+                    .unset("passwordResetTokenHash")
+                    .unset("passwordResetExpiresAt");
+            mongoTemplate.updateFirst(cleanup, cleanupUpdate, User.class);
             throw new InvalidPasswordResetTokenException();
         }
 
