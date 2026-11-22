@@ -20,6 +20,12 @@ public enum AuditAction {
     @Schema(description = "Troca de senha")
     PASSWORD_CHANGED,
 
+    @Schema(description = "Solicitacao de redefinicao de senha")
+    PASSWORD_RESET_REQUESTED,
+
+    @Schema(description = "Redefinicao de senha concluida")
+    PASSWORD_RESET_COMPLETED,
+
     @Schema(description = "Logout (rotacao de refresh token)")
     USER_LOGGED_OUT
 }

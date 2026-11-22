@@ -22,7 +22,7 @@ O nome vem de RPG: o livro da guilda registra quem é membro, qual papel tem e o
 | Postman | [coleção](postman/livro-da-guilda.postman_collection.json) · [environment](postman/demo.postman_environment.json) |
 
 A demo é **somente leitura de propósito**: qualquer pessoa pode logar e ler, mas
-`POST`/`PUT`/`PATCH`/`DELETE` em `/api/v1/**` retornam `403`. A raiz do site
+`POST`/`PUT`/`PATCH`/`DELETE` em `/api/v1/**` e a recuperação de senha retornam `403`. A raiz do site
 (`https://livro-da-guilda.onrender.com/`) redireciona para o Swagger, então dá
 para mandar esse link para alguém sem explicar nada. Para ver o fluxo de escrita
 completo, rode localmente ([docs/demo.md](docs/demo.md)); a coleção do Postman funciona nos dois modos. O plano free
@@ -121,6 +121,35 @@ Senha atual errada devolve 400 com `code: INVALID_PASSWORD`.
 - CORS é desligado por padrão; libere origens com `CORS_ALLOWED_ORIGINS` (separadas por vírgula).
 - Deploy, backup e rotação de segredo: [docs/operacao.md](docs/operacao.md).
 
+## Recuperação de senha
+
+Fluxo público, sem autenticação, para quem esqueceu a senha:
+
+```bash
+curl -X POST http://localhost:8080/auth/forgot-password \
+  -H "Content-Type: application/json" \
+  -d '{"email":"maria.silva@email.com"}'
+```
+
+A resposta é sempre `204 No Content`, mesmo para e-mail inexistente ou inativo, para
+não revelar cadastros. O token de 256 bits é entregue pelo canal configurado:
+em `dev`/`test` (`delivery: log`) ele aparece no log com o marcador
+`PASSWORD_RESET_TOKEN`; em `prod` (`delivery: none`) o endpoint responde
+`503 PASSWORD_RESET_UNAVAILABLE` e não cria token.
+
+Com o token, redefina a senha:
+
+```bash
+curl -X POST http://localhost:8080/auth/reset-password \
+  -H "Content-Type: application/json" \
+  -d '{"token":"<token>","newPassword":"novaSenha123"}'
+```
+
+O token é de uso único e vale 15 minutos. O reset troca a senha, incrementa
+`tokenVersion` (invalida refresh tokens anteriores) e limpa o token pendente.
+Access tokens já emitidos continuam válidos até expirar (1 hora). Na demo
+pública os dois endpoints retornam `403 READ_ONLY_DEMO`.
+
 ## Endpoints
 
 Base: `/api/v1/users`
@@ -134,6 +163,8 @@ Base: `/api/v1/users`
 | PATCH | `/api/v1/users/{id}/status` | Ativa/desativa |
 | DELETE | `/api/v1/users/{id}` | Remove |
 | PUT | `/api/v1/me/password` | Troca a senha do usuário autenticado |
+| POST | `/auth/forgot-password` | Solicita token de redefinição de senha (público) |
+| POST | `/auth/reset-password` | Redefine a senha com o token (público) |
 | POST | `/auth/logout` | Invalida os refresh tokens do usuário autenticado |
 
 Parâmetros de listagem: `page`, `size` (máx. 50), `sort`, `search`, `role` (USER/ADMIN), `active` (true/false).
@@ -146,7 +177,7 @@ curl -X POST http://localhost:8080/api/v1/users \
   -d '{"name":"Maria Silva","email":"maria.silva@email.com","role":"USER","password":"senha12345"}'
 ```
 
-Erros retornam `application/problem+json` com `code`: `VALIDATION_ERROR`, `INVALID_REQUEST`, `RESOURCE_NOT_FOUND`, `EMAIL_ALREADY_EXISTS`, `INVALID_CREDENTIALS`, `INVALID_REFRESH_TOKEN`, `INVALID_PASSWORD`, `TOO_MANY_ATTEMPTS`, `INTERNAL_ERROR`.
+Erros retornam `application/problem+json` com `code`: `VALIDATION_ERROR`, `INVALID_REQUEST`, `RESOURCE_NOT_FOUND`, `EMAIL_ALREADY_EXISTS`, `INVALID_CREDENTIALS`, `INVALID_REFRESH_TOKEN`, `INVALID_PASSWORD`, `INVALID_OR_EXPIRED_TOKEN`, `TOO_MANY_ATTEMPTS`, `PASSWORD_RESET_UNAVAILABLE`, `READ_ONLY_DEMO`, `INTERNAL_ERROR`.
 
 ## Testes
 
@@ -154,7 +185,7 @@ Erros retornam `application/problem+json` com `code`: `VALIDATION_ERROR`, `INVAL
 mvn test
 ```
 
-32 testes (25 de integração com MongoDB embarcado e 7 unitários) cobrindo criação, leitura, atualização, ativação, exclusão, paginação, busca, filtros, e-mail duplicado, validação, recurso inexistente, os erros 404/405 e autenticação (401 sem token ou credencial inválida, 403 para quem não é ADMIN, emissão, rotação e troca de refresh token, recusa de token com o tipo errado ou já rotacionado, troca de senha, logout e bloqueio por excesso de tentativas). Os testes do modo demo garantem que login e leitura continuam funcionando e que toda escrita em `/api/v1/**` recebe `403 READ_ONLY_DEMO` sem alterar o banco.
+Os testes cobrem criação, leitura, atualização, ativação, exclusão, paginação, busca, filtros, e-mail duplicado, validação, recurso inexistente, os erros 404/405 e autenticação (401 sem token ou credencial inválida, 403 para quem não é ADMIN, emissão, rotação e troca de refresh token, recusa de token com o tipo errado ou já rotacionado, troca de senha, logout e bloqueio por excesso de tentativas). A recuperação de senha tem testes de fluxo feliz, e-mail inexistente/inativo, token inválido/expirado/reutilizado, concorrência, rate limit, auditoria, limpeza do token e indisponibilidade do canal. Os testes do modo demo garantem que login e leitura continuam funcionando e que toda escrita em `/api/v1/**` e a recuperação de senha recebem `403 READ_ONLY_DEMO` sem alterar o banco.
 
 O `mvn verify` também roda o SpotBugs (falha em achados de prioridade alta).
 

@@ -111,6 +111,48 @@ class DemoReadOnlyIntegrationTest {
                 .andExpect(jsonPath("$.code").value(DemoReadOnlyFilter.CODE));
     }
 
+    @Test
+    void shouldRejectPasswordResetEndpoints() throws Exception {
+        mockMvc.perform(post("/auth/forgot-password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("email", ADMIN_EMAIL))))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value(DemoReadOnlyFilter.CODE));
+
+        mockMvc.perform(post("/auth/reset-password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "token", "token-qualquer",
+                                "newPassword", "novaSenha123"))))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value(DemoReadOnlyFilter.CODE));
+    }
+
+    @Test
+    void shouldKeepRefreshAndLogoutAvailable() throws Exception {
+        String loginBody = mockMvc.perform(post("/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                Map.of("email", ADMIN_EMAIL, "password", ADMIN_PASSWORD))))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        String accessToken = objectMapper.readTree(loginBody).get("accessToken").asText();
+        String refreshToken = objectMapper.readTree(loginBody).get("refreshToken").asText();
+
+        mockMvc.perform(post("/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("refreshToken", refreshToken))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accessToken").isNotEmpty());
+
+        mockMvc.perform(post("/auth/logout")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken))
+                .andExpect(status().isNoContent());
+    }
+
     private String login() throws Exception {
         String body = mockMvc.perform(post("/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)

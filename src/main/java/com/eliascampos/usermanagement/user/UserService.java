@@ -114,6 +114,10 @@ public class UserService {
         UserRole oldRole = user.getRole();
 
         user.update(request.name().trim(), email, request.role());
+        if (!oldEmail.equals(email)) {
+            // O token foi enviado para o e-mail antigo: nao deve continuar valendo.
+            user.clearPasswordReset();
+        }
         try {
             User saved = userRepository.save(user);
             auditService.record(AuditAction.USER_UPDATED, saved, Map.of(

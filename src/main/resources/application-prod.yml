@@ -25,3 +25,6 @@ app:
     jwt:
       # Sem valor padrao: a aplicacao falha ao subir se JWT_SECRET nao existir.
       secret: ${JWT_SECRET}
+    password-reset:
+      # Ate existir um provedor de e-mail, o endpoint responde 503 e nao cria token.
+      delivery: none

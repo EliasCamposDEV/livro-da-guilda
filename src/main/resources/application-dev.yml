@@ -5,3 +5,9 @@ de:
     mongodb:
       embedded:
         version: ${EMBEDDED_MONGO_VERSION:8.0.5}
+
+# Em dev o token de redefinicao aparece no log (marcador PASSWORD_RESET_TOKEN).
+app:
+  security:
+    password-reset:
+      delivery: log

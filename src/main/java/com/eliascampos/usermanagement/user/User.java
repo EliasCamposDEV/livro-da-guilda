@@ -19,6 +19,11 @@ public class User {
 
     private String passwordHash;
 
+    @Indexed(unique = true, sparse = true)
+    private String passwordResetTokenHash;
+
+    private Instant passwordResetExpiresAt;
+
     private UserRole role;
 
     private boolean active;
@@ -54,11 +59,26 @@ public class User {
     public void changeStatus(boolean active) {
         this.active = active;
         this.updatedAt = Instant.now();
+        if (!active) {
+            // Usuario inativo nao pode manter um token de redefinicao pendente.
+            clearPasswordReset();
+        }
     }
 
     public void changePassword(String passwordHash) {
         this.passwordHash = passwordHash;
         this.updatedAt = Instant.now();
+        clearPasswordReset();
+    }
+
+    public void startPasswordReset(String tokenHash, Instant expiresAt) {
+        this.passwordResetTokenHash = tokenHash;
+        this.passwordResetExpiresAt = expiresAt;
+    }
+
+    public void clearPasswordReset() {
+        this.passwordResetTokenHash = null;
+        this.passwordResetExpiresAt = null;
     }
 
     public void rotateTokenVersion() {
@@ -79,6 +99,14 @@ public class User {
 
     public String getPasswordHash() {
         return passwordHash;
+    }
+
+    public String getPasswordResetTokenHash() {
+        return passwordResetTokenHash;
+    }
+
+    public Instant getPasswordResetExpiresAt() {
+        return passwordResetExpiresAt;
     }
 
     public UserRole getRole() {

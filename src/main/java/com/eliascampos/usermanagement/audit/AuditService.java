@@ -44,6 +44,19 @@ public class AuditService {
                 ? authentication.getAuthorities().toString()
                 : "SYSTEM";
 
+        save(action, actorEmail, actorRole, targetUserId, targetUserEmail, details);
+    }
+
+    /**
+     * Registra uma acao de fluxo publico, em que nao ha usuario autenticado.
+     * Nao usa o SecurityContext para nao gravar "anonymousUser" no historico.
+     */
+    public void recordSystem(AuditAction action, User target, Map<String, Object> details) {
+        save(action, "system", "SYSTEM", target.getId(), target.getEmail(), details);
+    }
+
+    private void save(AuditAction action, String actorEmail, String actorRole,
+                      String targetUserId, String targetUserEmail, Map<String, Object> details) {
         String ip = null;
         if (RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes attrs) {
             HttpServletRequest request = attrs.getRequest();

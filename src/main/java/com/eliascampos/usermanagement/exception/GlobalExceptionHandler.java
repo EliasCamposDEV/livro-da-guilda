@@ -1,7 +1,10 @@
 package com.eliascampos.usermanagement.exception;
 
+import com.eliascampos.usermanagement.auth.InvalidPasswordResetTokenException;
 import com.eliascampos.usermanagement.auth.InvalidRefreshTokenException;
+import com.eliascampos.usermanagement.auth.PasswordResetUnavailableException;
 import com.eliascampos.usermanagement.auth.TooManyAttemptsException;
+import com.eliascampos.usermanagement.auth.TooManyPasswordResetRequestsException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -105,6 +108,35 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
                 .header(HttpHeaders.RETRY_AFTER, String.valueOf(ex.getRetryAfterSeconds()))
                 .body(problem);
+    }
+
+    @ExceptionHandler(InvalidPasswordResetTokenException.class)
+    public ResponseEntity<ProblemDetail> handleInvalidPasswordResetToken(InvalidPasswordResetTokenException ex,
+                                                                         HttpServletRequest request) {
+        ProblemDetail problem = problem(HttpStatus.BAD_REQUEST, "Token invalido",
+                "O token de redefinicao e invalido, expirou ou ja foi usado", request);
+        problem.setProperty("code", "INVALID_OR_EXPIRED_TOKEN");
+        return ResponseEntity.badRequest().body(problem);
+    }
+
+    @ExceptionHandler(TooManyPasswordResetRequestsException.class)
+    public ResponseEntity<ProblemDetail> handleTooManyPasswordResetRequests(
+            TooManyPasswordResetRequestsException ex, HttpServletRequest request) {
+        ProblemDetail problem = problem(HttpStatus.TOO_MANY_REQUESTS, "Muitas solicitacoes",
+                "Muitas solicitacoes. Tente novamente mais tarde.", request);
+        problem.setProperty("code", "TOO_MANY_ATTEMPTS");
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .header(HttpHeaders.RETRY_AFTER, String.valueOf(ex.getRetryAfterSeconds()))
+                .body(problem);
+    }
+
+    @ExceptionHandler(PasswordResetUnavailableException.class)
+    public ResponseEntity<ProblemDetail> handlePasswordResetUnavailable(PasswordResetUnavailableException ex,
+                                                                        HttpServletRequest request) {
+        ProblemDetail problem = problem(HttpStatus.SERVICE_UNAVAILABLE, "Recuperacao de senha indisponivel",
+                "A recuperacao de senha nao esta disponivel neste ambiente", request);
+        problem.setProperty("code", "PASSWORD_RESET_UNAVAILABLE");
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(problem);
     }
 
     @ExceptionHandler(NoResourceFoundException.class)

@@ -4,6 +4,12 @@ de:
       embedded:
         version: ${EMBEDDED_MONGO_VERSION:8.0.5}
 
+# Os testes usam um notifier de captura quando precisam ler o token.
+app:
+  security:
+    password-reset:
+      delivery: log
+
 logging:
   level:
     root: WARN

@@ -1,7 +1,9 @@
 package com.eliascampos.usermanagement.auth;
 
+import com.eliascampos.usermanagement.auth.dto.ForgotPasswordRequest;
 import com.eliascampos.usermanagement.auth.dto.LoginRequest;
 import com.eliascampos.usermanagement.auth.dto.RefreshRequest;
+import com.eliascampos.usermanagement.auth.dto.ResetPasswordRequest;
 import com.eliascampos.usermanagement.auth.dto.TokenResponse;
 import com.eliascampos.usermanagement.exception.ApiError;
 import com.eliascampos.usermanagement.security.AppUserDetails;
@@ -30,7 +32,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Locale;
 
-@Tag(name = "Autenticação", description = "Login, emissão de token e refresh")
+@Tag(name = "Autenticação", description = "Login, emissão de token, refresh e recuperação de senha")
 @RestController
 @RequestMapping(value = "/auth", produces = "application/json")
 public class AuthController {
@@ -39,13 +41,16 @@ public class AuthController {
     private final JwtService jwtService;
     private final UserService userService;
     private final LoginRateLimiter loginRateLimiter;
+    private final PasswordResetService passwordResetService;
 
     public AuthController(AuthenticationManager authenticationManager, JwtService jwtService,
-                          UserService userService, LoginRateLimiter loginRateLimiter) {
+                          UserService userService, LoginRateLimiter loginRateLimiter,
+                          PasswordResetService passwordResetService) {
         this.authenticationManager = authenticationManager;
         this.jwtService = jwtService;
         this.userService = userService;
         this.loginRateLimiter = loginRateLimiter;
+        this.passwordResetService = passwordResetService;
     }
 
     @Operation(summary = "Autentica com e-mail e senha",
@@ -113,5 +118,51 @@ public class AuthController {
     @PostMapping("/refresh")
     public TokenResponse refresh(@Valid @RequestBody RefreshRequest request) {
         return jwtService.refresh(request.refreshToken());
+    }
+
+    @Operation(summary = "Solicita a redefinicao de senha",
+            description = "Gera um token de uso unico e entrega pelo canal configurado. "
+                    + "Responde 204 mesmo para e-mail inexistente ou inativo, para nao revelar cadastros. "
+                    + "Na demo publica retorna 403 READ_ONLY_DEMO.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Solicitacao processada"),
+            @ApiResponse(responseCode = "400", description = "Corpo da requisicao invalido",
+                    content = @Content(mediaType = "application/problem+json",
+                            schema = @Schema(implementation = ApiError.class))),
+            @ApiResponse(responseCode = "403", description = "Demo somente leitura",
+                    content = @Content(mediaType = "application/problem+json",
+                            schema = @Schema(implementation = ApiError.class))),
+            @ApiResponse(responseCode = "429", description = "Muitas solicitacoes de recuperacao",
+                    headers = @Header(name = "Retry-After",
+                            description = "Segundos até poder tentar novamente"),
+                    content = @Content(mediaType = "application/problem+json",
+                            schema = @Schema(implementation = ApiError.class))),
+            @ApiResponse(responseCode = "503", description = "Canal de entrega indisponivel",
+                    content = @Content(mediaType = "application/problem+json",
+                            schema = @Schema(implementation = ApiError.class)))
+    })
+    @PostMapping("/forgot-password")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void forgotPassword(@Valid @RequestBody ForgotPasswordRequest request,
+                               HttpServletRequest httpRequest) {
+        passwordResetService.requestReset(request.email(), httpRequest.getRemoteAddr());
+    }
+
+    @Operation(summary = "Redefine a senha com o token",
+            description = "Troca a senha, invalida refresh tokens anteriores e consome o token. "
+                    + "Nao devolve tokens de acesso. Na demo publica retorna 403 READ_ONLY_DEMO.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Senha redefinida"),
+            @ApiResponse(responseCode = "400", description = "Corpo invalido ou token invalido/expirado",
+                    content = @Content(mediaType = "application/problem+json",
+                            schema = @Schema(implementation = ApiError.class))),
+            @ApiResponse(responseCode = "403", description = "Demo somente leitura",
+                    content = @Content(mediaType = "application/problem+json",
+                            schema = @Schema(implementation = ApiError.class)))
+    })
+    @PostMapping("/reset-password")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        passwordResetService.resetPassword(request.token(), request.newPassword());
     }
 }

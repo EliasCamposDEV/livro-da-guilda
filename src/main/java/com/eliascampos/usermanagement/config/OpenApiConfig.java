@@ -33,7 +33,7 @@ public class OpenApiConfig {
                         .title("Livro da Guilda")
                         .description("""
                                 **Demo pública somente leitura.** Use `demo@eliascampos.dev` / `demo-readonly-2026` para explorar.
-                                Escritas em `/api/v1/**` retornam `403 READ_ONLY_DEMO`.
+                                Escritas em `/api/v1/**` e a recuperação de senha retornam `403 READ_ONLY_DEMO`.
 
                                 **Como usar**
                                 1. Chame `POST /auth/login` com as credenciais da demo (o corpo já vem preenchido).
@@ -41,11 +41,13 @@ public class OpenApiConfig {
                                 3. Clique em **Authorize** e cole apenas o token (sem o prefixo `Bearer`).
                                 4. Expanda um endpoint, ajuste os parâmetros e clique em **Execute**.
 
-                                - Leitura funciona; escrita (POST/PUT/PATCH/DELETE em `/api/v1/**`) retorna `403 READ_ONLY_DEMO`.
+                                - Leitura funciona; escrita (POST/PUT/PATCH/DELETE em `/api/v1/**`) e recuperação de senha retornam `403 READ_ONLY_DEMO`.
+                                - Em dev, o token de recuperação aparece no log com o marcador `PASSWORD_RESET_TOKEN`. Em prod, sem provedor de e-mail, o endpoint responde `503 PASSWORD_RESET_UNAVAILABLE`.
                                 - A instância gratuita hiberna; o primeiro acesso pode levar 30-60 s.
                                 - Em execução local, use o admin criado no primeiro start (veja o README).
 
-                                **Limites:** `/auth/login` bloqueia após 5 tentativas erradas por e-mail + IP em 15 min (429).""")
+                                **Limites:** `/auth/login` bloqueia após 5 tentativas erradas por e-mail + IP em 15 min (429).
+                                `/auth/forgot-password` aceita 5 solicitações por e-mail + IP e 20 por IP a cada hora (429).""")
                         .version("1.0.0")
                         .contact(new Contact()
                                 .name("Elias Campos")
@@ -116,10 +118,18 @@ public class OpenApiConfig {
                 }
 
                 switch (status) {
-                    case "400" -> problem.addExamples("validacao", problemExample(
-                            "Dados inválidos", 400, "Dados invalidos",
-                            "Um ou mais campos estao invalidos", "VALIDATION_ERROR", path,
-                            Map.of("email", "Informe um e-mail valido")));
+                    case "400" -> {
+                        problem.addExamples("validacao", problemExample(
+                                "Dados inválidos", 400, "Dados invalidos",
+                                "Um ou mais campos estao invalidos", "VALIDATION_ERROR", path,
+                                Map.of("email", "Informe um e-mail valido")));
+                        if ("resetPassword".equals(methodName)) {
+                            problem.addExamples("tokenInvalido", problemExample(
+                                    "Token inválido ou expirado", 400, "Token invalido",
+                                    "O token de redefinicao e invalido, expirou ou ja foi usado",
+                                    "INVALID_OR_EXPIRED_TOKEN", path, null));
+                        }
+                    }
                     case "401" -> addUnauthorizedExample(problem, methodName, path);
                     case "403" -> addForbiddenExamples(problem, path, demoWrite);
                     case "404" -> problem.addExamples("naoEncontrado", problemExample(
@@ -129,10 +139,23 @@ public class OpenApiConfig {
                             "E-mail já cadastrado", 409, "Conflito de dados",
                             "Ja existe um usuario cadastrado com o e-mail informado",
                             "EMAIL_ALREADY_EXISTS", path, null));
-                    case "429" -> problem.addExamples("muitasTentativas", problemExample(
-                            "Muitas tentativas", 429, "Muitas tentativas de login",
-                            "Muitas tentativas de login. Tente novamente mais tarde.",
-                            "TOO_MANY_ATTEMPTS", path, null));
+                    case "429" -> {
+                        if ("forgotPassword".equals(methodName)) {
+                            problem.addExamples("muitasSolicitacoes", problemExample(
+                                    "Muitas solicitações", 429, "Muitas solicitacoes",
+                                    "Muitas solicitacoes. Tente novamente mais tarde.",
+                                    "TOO_MANY_ATTEMPTS", path, null));
+                        } else {
+                            problem.addExamples("muitasTentativas", problemExample(
+                                    "Muitas tentativas", 429, "Muitas tentativas de login",
+                                    "Muitas tentativas de login. Tente novamente mais tarde.",
+                                    "TOO_MANY_ATTEMPTS", path, null));
+                        }
+                    }
+                    case "503" -> problem.addExamples("indisponivel", problemExample(
+                            "Recuperação indisponível", 503, "Recuperacao de senha indisponivel",
+                            "A recuperacao de senha nao esta disponivel neste ambiente",
+                            "PASSWORD_RESET_UNAVAILABLE", path, null));
                     default -> {
                         // Status sem exemplo específico.
                     }
@@ -197,6 +220,8 @@ public class OpenApiConfig {
             case "login" -> "/auth/login";
             case "refresh" -> "/auth/refresh";
             case "logout" -> "/auth/logout";
+            case "forgotPassword" -> "/auth/forgot-password";
+            case "resetPassword" -> "/auth/reset-password";
             case "changePassword" -> "/api/v1/me/password";
             case "findById", "update", "delete" -> "/api/v1/users/{id}";
             case "changeStatus" -> "/api/v1/users/{id}/status";

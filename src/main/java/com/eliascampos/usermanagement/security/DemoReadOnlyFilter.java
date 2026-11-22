@@ -20,8 +20,9 @@ import java.time.Instant;
 import java.util.Set;
 
 /**
- * Na demo publica a API e somente leitura: qualquer escrita em /api/v1 e recusada
- * antes de chegar ao controller. Login, refresh, logout e leitura continuam funcionando.
+ * Na demo publica a API e somente leitura: qualquer escrita em /api/v1 e nas
+ * rotas de recuperacao de senha e recusada antes de chegar ao controller.
+ * Login, refresh, logout e leitura continuam funcionando.
  * Ativado por app.demo.read-only=true (perfil demo); fora dele o filtro nem existe.
  */
 @Component
@@ -31,6 +32,10 @@ public class DemoReadOnlyFilter extends OncePerRequestFilter {
 
     static final String CODE = "READ_ONLY_DEMO";
     private static final Set<String> SAFE_METHODS = Set.of("GET", "HEAD", "OPTIONS");
+    private static final Set<String> BLOCKED_AUTH_PATHS = Set.of(
+            "/auth/forgot-password", "/auth/forgot-password/",
+            "/auth/reset-password", "/auth/reset-password/"
+    );
 
     private final ObjectMapper objectMapper;
 
@@ -41,7 +46,9 @@ public class DemoReadOnlyFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
-        if (request.getRequestURI().startsWith("/api/v1/") && !SAFE_METHODS.contains(request.getMethod())) {
+        String path = request.getRequestURI();
+        boolean blockedPath = path.startsWith("/api/v1/") || BLOCKED_AUTH_PATHS.contains(path);
+        if (blockedPath && !SAFE_METHODS.contains(request.getMethod())) {
             writeProblem(request, response);
             return;
         }

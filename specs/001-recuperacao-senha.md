@@ -1,6 +1,6 @@
 # Spec 001 - Recuperacao de senha
 
-Status: revisada em 2026-11-22, aguardando aprovacao para implementacao.
+Status: implementada em 2026-11-22. Critérios de aceite validados por testes unitários e de integração (Testcontainers).
 
 ## Contexto
 Hoje o usuario so consegue trocar a senha estando autenticado (`PUT /api/v1/me/password`). Quem esqueceu a senha fica sem saida. A API tambem nao tem um canal para entregar um token de redefinicao.
@@ -144,20 +144,20 @@ Sem migracao: documentos antigos ficam sem os campos e o indice esparso aceita v
 - `mvn -B verify` verde com os testes de Testcontainers no GitHub Actions.
 
 ## Criterios de aceite
-- [ ] `POST /auth/forgot-password` responde 204 para e-mail ativo, inexistente e inativo, sem revelar qual caso ocorreu.
-- [ ] Token tem 256 bits, e armazenado apenas como hash SHA-256 com validade de 15 min e indice unico esparso.
-- [ ] Nova solicitacao invalida o token pendente anterior.
-- [ ] `POST /auth/reset-password` com token valido responde 204, troca a senha, incrementa `tokenVersion` e limpa o token.
-- [ ] Token desconhecido, expirado, reutilizado ou de usuario inativo responde 400 `INVALID_OR_EXPIRED_TOKEN`.
-- [ ] Senha invalida responde 400 `VALIDATION_ERROR` sem consumir o token.
-- [ ] Troca de senha autenticada, desativacao e alteracao de e-mail limpam o token pendente.
-- [ ] Rate limit 5/h por `email + IP` e 20/h por IP responde 429 com `Retry-After`, inclusive para e-mail inexistente, com mensagem neutra.
-- [ ] Perfil demo responde 403 `READ_ONLY_DEMO` nos dois endpoints, sem afetar login, refresh e logout.
-- [ ] `delivery=none` responde 503 e nao grava token; `delivery=log` so registra o token em dev/test e nunca na resposta HTTP.
-- [ ] Auditoria registra solicitacao e conclusao com alvo, IP e ator `system`, sem token ou hash.
-- [ ] Swagger documenta as duas rotas e os status 204, 400, 403, 429 e 503 com exemplos reais, sem token no schema de resposta.
-- [ ] Testes unitarios e de integracao com Testcontainers passam localmente e no CI.
-- [ ] README explica como obter o token no log em dev e por que a demo retorna 403.
+- [x] `POST /auth/forgot-password` responde 204 para e-mail ativo, inexistente e inativo, sem revelar qual caso ocorreu.
+- [x] Token tem 256 bits, e armazenado apenas como hash SHA-256 com validade de 15 min e indice unico esparso.
+- [x] Nova solicitacao invalida o token pendente anterior.
+- [x] `POST /auth/reset-password` com token valido responde 204, troca a senha, incrementa `tokenVersion` e limpa o token.
+- [x] Token desconhecido, expirado, reutilizado ou de usuario inativo responde 400 `INVALID_OR_EXPIRED_TOKEN`.
+- [x] Senha invalida responde 400 `VALIDATION_ERROR` sem consumir o token.
+- [x] Troca de senha autenticada, desativacao e alteracao de e-mail limpam o token pendente.
+- [x] Rate limit 5/h por `email + IP` e 20/h por IP responde 429 com `Retry-After`, inclusive para e-mail inexistente, com mensagem neutra.
+- [x] Perfil demo responde 403 `READ_ONLY_DEMO` nos dois endpoints, sem afetar login, refresh e logout.
+- [x] `delivery=none` responde 503 e nao grava token; `delivery=log` so registra o token em dev/test e nunca na resposta HTTP.
+- [x] Auditoria registra solicitacao e conclusao com alvo, IP e ator `system`, sem token ou hash.
+- [x] Swagger documenta as duas rotas e os status 204, 400, 403, 429 e 503 com exemplos reais, sem token no schema de resposta.
+- [x] Testes unitarios e de integracao com Testcontainers passam localmente e no CI.
+- [x] README explica como obter o token no log em dev e por que a demo retorna 403.
 
 ## Limitacoes e riscos
 - Rate limit em memoria: com mais de uma replica, cada instancia tem sua propria janela. Redis ou outro store compartilhado fica para quando houver escala horizontal.

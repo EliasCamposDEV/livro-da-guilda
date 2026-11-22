@@ -47,6 +47,14 @@ class DemoReadOnlyFilterTest {
     }
 
     @Test
+    void shouldBlockPasswordResetEndpoints() throws Exception {
+        assertBlocked("POST", "/auth/forgot-password");
+        assertBlocked("POST", "/auth/forgot-password/");
+        assertBlocked("POST", "/auth/reset-password");
+        assertBlocked("POST", "/auth/reset-password/");
+    }
+
+    @Test
     void shouldIgnoreWritesOutsideTheApi() throws Exception {
         assertPasses("POST", "/actuator/health");
     }

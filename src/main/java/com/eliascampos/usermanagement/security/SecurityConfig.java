@@ -57,7 +57,9 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         // "/" so existe no perfil demo (DemoLandingController): redireciona para o Swagger.
-                        .requestMatchers("/", "/auth/login", "/auth/refresh", "/swagger-custom.css").permitAll()
+                        .requestMatchers("/", "/auth/login", "/auth/refresh",
+                                "/auth/forgot-password", "/auth/reset-password",
+                                "/swagger-custom.css").permitAll()
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html",
                                 "/actuator/health/**").permitAll()
                         .requestMatchers("/api/v1/users/**").hasRole("ADMIN")

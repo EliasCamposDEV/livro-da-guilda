@@ -26,6 +26,9 @@ app:
     jwt:
       # Sem valor padrao: a aplicacao falha ao subir se JWT_SECRET nao existir.
       secret: ${JWT_SECRET}
+    password-reset:
+      # A demo e somente leitura: os endpoints de reset sao bloqueados antes daqui.
+      delivery: none
   demo:
     # Recusa POST/PUT/PATCH/DELETE em /api/v1 com 403 READ_ONLY_DEMO.
     # Login, refresh, logout, Swagger e leitura continuam disponiveis.

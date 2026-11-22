@@ -62,3 +62,7 @@ app:
       ttl-seconds: 3600
       # 7 dias: vida do refresh token usado em /auth/refresh.
       refresh-ttl-seconds: 604800
+    password-reset:
+      # log apenas em dev/test; none responde 503 e evita gerar token sem entrega.
+      delivery: ${PASSWORD_RESET_DELIVERY:none}
+      token-ttl: ${PASSWORD_RESET_TOKEN_TTL:PT15M}
