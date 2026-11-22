@@ -163,6 +163,7 @@ Base: `/api/v1/users`
 | PATCH | `/api/v1/users/{id}/status` | Ativa/desativa |
 | DELETE | `/api/v1/users/{id}` | Remove |
 | PUT | `/api/v1/me/password` | Troca a senha do usuário autenticado |
+| GET | `/api/v1/audit` | Lista eventos de auditoria (ADMIN) |
 | POST | `/auth/forgot-password` | Solicita token de redefinição de senha (público) |
 | POST | `/auth/reset-password` | Redefine a senha com o token (público) |
 | POST | `/auth/logout` | Invalida os refresh tokens do usuário autenticado |
@@ -188,6 +189,14 @@ mvn test
 Os testes cobrem criação, leitura, atualização, ativação, exclusão, paginação, busca, filtros, e-mail duplicado, validação, recurso inexistente, os erros 404/405 e autenticação (401 sem token ou credencial inválida, 403 para quem não é ADMIN, emissão, rotação e troca de refresh token, recusa de token com o tipo errado ou já rotacionado, troca de senha, logout e bloqueio por excesso de tentativas). A recuperação de senha tem testes de fluxo feliz, e-mail inexistente/inativo, token inválido/expirado/reutilizado, concorrência, rate limit, auditoria, limpeza do token e indisponibilidade do canal. Os testes do modo demo garantem que login e leitura continuam funcionando e que toda escrita em `/api/v1/**` e a recuperação de senha recebem `403 READ_ONLY_DEMO` sem alterar o banco.
 
 O `mvn verify` também roda o SpotBugs (falha em achados de prioridade alta).
+
+## Documentação
+
+- [docs/demo.md](docs/demo.md) — demo pública, credenciais e como rodar localmente.
+- [docs/deploy-render.md](docs/deploy-render.md) — deploy da demo no Render + MongoDB Atlas.
+- [docs/operacao.md](docs/operacao.md) — variáveis, backup, rotação de segredo, limites.
+- [specs/](specs/) — specs numeradas (001 recuperação de senha, 002 autenticação/JWT, 003 API de usuários, 004 auditoria, 005 demo/deploy).
+- [postman/](postman/) — coleção e environment para Postman/Insomnia.
 
 ## Notas
 

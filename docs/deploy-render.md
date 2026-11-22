@@ -67,7 +67,7 @@ curl -s -o /dev/null -w "%{http_code}\n" $BASE/swagger-ui.html
 
 TOKEN=$(curl -s -X POST $BASE/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"demo@eliascampos.dev","password":"SUA_SENHA"}' \
+  -d '{"email":"demo@eliascampos.dev","password":"demo-readonly-2026"}' \
   | sed -E 's/.*"accessToken":"([^"]+)".*/\1/')
 
 curl -s $BASE/api/v1/users -H "Authorization: Bearer $TOKEN" | head -c 400
