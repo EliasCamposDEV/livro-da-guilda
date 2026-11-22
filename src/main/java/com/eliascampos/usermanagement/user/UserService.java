@@ -1,5 +1,7 @@
 package com.eliascampos.usermanagement.user;
 
+import com.eliascampos.usermanagement.audit.AuditAction;
+import com.eliascampos.usermanagement.audit.AuditService;
 import com.eliascampos.usermanagement.exception.DuplicateEmailException;
 import com.eliascampos.usermanagement.exception.InvalidPasswordException;
 import com.eliascampos.usermanagement.exception.ResourceNotFoundException;
@@ -22,6 +24,7 @@ import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Locale;
 import java.util.regex.Pattern;
 
@@ -31,12 +34,14 @@ public class UserService {
     private final UserRepository userRepository;
     private final MongoTemplate mongoTemplate;
     private final PasswordEncoder passwordEncoder;
+    private final AuditService auditService;
 
     public UserService(UserRepository userRepository, MongoTemplate mongoTemplate,
-                       PasswordEncoder passwordEncoder) {
+                       PasswordEncoder passwordEncoder, AuditService auditService) {
         this.userRepository = userRepository;
         this.mongoTemplate = mongoTemplate;
         this.passwordEncoder = passwordEncoder;
+        this.auditService = auditService;
     }
 
     public UserResponse create(UserRequest request) {
@@ -48,7 +53,13 @@ public class UserService {
         User user = new User(request.name().trim(), email, request.role(),
                 passwordEncoder.encode(request.password()));
         try {
-            return UserResponse.from(userRepository.save(user));
+            User saved = userRepository.save(user);
+            auditService.record(AuditAction.USER_CREATED, saved, Map.of(
+                    "name", saved.getName(),
+                    "email", saved.getEmail(),
+                    "role", saved.getRole().name()
+            ));
+            return UserResponse.from(saved);
         } catch (DuplicateKeyException ex) {
             throw new DuplicateEmailException(email);
         }
@@ -98,9 +109,19 @@ public class UserService {
             throw new DuplicateEmailException(email);
         }
 
+        String oldName = user.getName();
+        String oldEmail = user.getEmail();
+        UserRole oldRole = user.getRole();
+
         user.update(request.name().trim(), email, request.role());
         try {
-            return UserResponse.from(userRepository.save(user));
+            User saved = userRepository.save(user);
+            auditService.record(AuditAction.USER_UPDATED, saved, Map.of(
+                    "name", Map.of("from", oldName, "to", saved.getName()),
+                    "email", Map.of("from", oldEmail, "to", saved.getEmail()),
+                    "role", Map.of("from", oldRole.name(), "to", saved.getRole().name())
+            ));
+            return UserResponse.from(saved);
         } catch (DuplicateKeyException ex) {
             throw new DuplicateEmailException(email);
         }
@@ -108,12 +129,22 @@ public class UserService {
 
     public UserResponse changeStatus(String id, UserStatusRequest request) {
         User user = findEntityById(id);
+        boolean oldActive = user.isActive();
         user.changeStatus(request.active());
-        return UserResponse.from(userRepository.save(user));
+        User saved = userRepository.save(user);
+        auditService.record(AuditAction.USER_STATUS_CHANGED, saved, Map.of(
+                "active", Map.of("from", oldActive, "to", saved.isActive())
+        ));
+        return UserResponse.from(saved);
     }
 
     public void delete(String id) {
         User user = findEntityById(id);
+        auditService.record(AuditAction.USER_DELETED, user, Map.of(
+                "name", user.getName(),
+                "email", user.getEmail(),
+                "role", user.getRole().name()
+        ));
         userRepository.delete(user);
     }
 
@@ -128,13 +159,19 @@ public class UserService {
         user.changePassword(passwordEncoder.encode(request.newPassword()));
         // Qualquer refresh token anterior deixa de valer: a senha mudou.
         user.rotateTokenVersion();
-        userRepository.save(user);
+        User saved = userRepository.save(user);
+        auditService.record(AuditAction.PASSWORD_CHANGED, saved, Map.of(
+                "email", saved.getEmail()
+        ));
     }
 
     public void logout(String email) {
         userRepository.findByEmail(email).ifPresent(user -> {
             user.rotateTokenVersion();
-            userRepository.save(user);
+            User saved = userRepository.save(user);
+            auditService.record(AuditAction.USER_LOGGED_OUT, saved, Map.of(
+                    "email", saved.getEmail()
+            ));
         });
     }
 

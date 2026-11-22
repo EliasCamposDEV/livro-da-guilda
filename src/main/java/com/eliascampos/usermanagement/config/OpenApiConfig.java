@@ -1,5 +1,6 @@
 package com.eliascampos.usermanagement.config;
 
+import com.eliascampos.usermanagement.audit.AuditController;
 import com.eliascampos.usermanagement.user.UserController;
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
@@ -71,9 +72,11 @@ public class OpenApiConfig {
     @Bean
     public OperationCustomizer pageableOperationCustomizer() {
         return (operation, handlerMethod) -> {
-            if (handlerMethod.getBeanType() == UserController.class
-                    && "findAll".equals(handlerMethod.getMethod().getName())
-                    && operation.getParameters() != null) {
+            boolean isUserFindAll = handlerMethod.getBeanType() == UserController.class
+                    && "findAll".equals(handlerMethod.getMethod().getName());
+            boolean isAuditFindAll = handlerMethod.getBeanType() == AuditController.class
+                    && "findAll".equals(handlerMethod.getMethod().getName());
+            if ((isUserFindAll || isAuditFindAll) && operation.getParameters() != null) {
                 operation.getParameters().forEach(parameter -> {
                     switch (parameter.getName()) {
                         case "page" -> parameter.setDescription("Número da página, começando em 0");
