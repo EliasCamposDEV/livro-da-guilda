@@ -10,6 +10,7 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Component;
 
 import java.util.Locale;
@@ -58,8 +59,12 @@ public class AdminBootstrap implements ApplicationRunner {
         }
 
         String normalizedEmail = email.toLowerCase(Locale.ROOT);
-        userRepository.save(new User("Admin", normalizedEmail, UserRole.ADMIN,
-                passwordEncoder.encode(password)));
-        log.warn("Admin inicial criado por bootstrap: {}", normalizedEmail);
+        try {
+            userRepository.save(new User("Admin", normalizedEmail, UserRole.ADMIN,
+                    passwordEncoder.encode(password)));
+            log.warn("Admin inicial criado por bootstrap: {}", normalizedEmail);
+        } catch (DuplicateKeyException ex) {
+            log.info("Admin inicial ignorado: usuario ja existe");
+        }
     }
 }

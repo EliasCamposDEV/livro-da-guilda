@@ -91,6 +91,14 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(problem);
     }
 
+    @ExceptionHandler(BusinessRuleException.class)
+    public ResponseEntity<ProblemDetail> handleBusinessRule(BusinessRuleException ex,
+                                                           HttpServletRequest request) {
+        ProblemDetail problem = problem(HttpStatus.BAD_REQUEST, "Regra de negocio", ex.getMessage(), request);
+        problem.setProperty("code", "INVALID_REQUEST");
+        return ResponseEntity.badRequest().body(problem);
+    }
+
     @ExceptionHandler(InvalidPasswordException.class)
     public ResponseEntity<ProblemDetail> handleInvalidPassword(InvalidPasswordException ex,
                                                               HttpServletRequest request) {
@@ -142,7 +150,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(NoResourceFoundException.class)
     public ResponseEntity<ProblemDetail> handleUnknownPath(HttpServletRequest request) {
         ProblemDetail problem = problem(HttpStatus.NOT_FOUND, "Recurso nao encontrado",
-                "Nao existe recurso no caminho " + request.getRequestURI(), request);
+                "Nao existe recurso no caminho solicitado", request);
         problem.setProperty("code", "RESOURCE_NOT_FOUND");
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(problem);
     }

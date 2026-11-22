@@ -18,6 +18,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -118,6 +120,10 @@ public class UserService {
             // O token foi enviado para o e-mail antigo: nao deve continuar valendo.
             user.clearPasswordReset();
         }
+        if (oldRole != request.role()) {
+            // Mudanca de papel invalida refresh tokens antigos.
+            user.rotateTokenVersion();
+        }
         try {
             User saved = userRepository.save(user);
             auditService.record(AuditAction.USER_UPDATED, saved, Map.of(
@@ -133,6 +139,18 @@ public class UserService {
 
     public UserResponse changeStatus(String id, UserStatusRequest request) {
         User user = findEntityById(id);
+
+        // Evita auto-desativacao e lockout do ultimo ADMIN.
+        if (!request.active()) {
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            if (auth != null && auth.getName() != null && auth.getName().equalsIgnoreCase(user.getEmail())) {
+                throw new com.eliascampos.usermanagement.exception.BusinessRuleException("Nao e possivel desativar o proprio usuario");
+            }
+            if (user.getRole() == UserRole.ADMIN && countActiveAdmins() <= 1) {
+                throw new com.eliascampos.usermanagement.exception.BusinessRuleException("Nao e possivel desativar o ultimo administrador ativo");
+            }
+        }
+
         boolean oldActive = user.isActive();
         user.changeStatus(request.active());
         User saved = userRepository.save(user);
@@ -144,6 +162,15 @@ public class UserService {
 
     public void delete(String id) {
         User user = findEntityById(id);
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getName() != null && auth.getName().equalsIgnoreCase(user.getEmail())) {
+            throw new com.eliascampos.usermanagement.exception.BusinessRuleException("Nao e possivel excluir o proprio usuario");
+        }
+        if (user.getRole() == UserRole.ADMIN && user.isActive() && countActiveAdmins() <= 1) {
+            throw new com.eliascampos.usermanagement.exception.BusinessRuleException("Nao e possivel excluir o ultimo administrador ativo");
+        }
+
         auditService.record(AuditAction.USER_DELETED, user, Map.of(
                 "name", user.getName(),
                 "email", user.getEmail(),
@@ -182,6 +209,13 @@ public class UserService {
     private User findEntityById(String id) {
         return userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario nao encontrado para o id " + id));
+    }
+
+    private long countActiveAdmins() {
+        org.springframework.data.mongodb.core.query.Criteria criteria =
+                org.springframework.data.mongodb.core.query.Criteria.where("role").is(UserRole.ADMIN.name())
+                        .and("active").is(true);
+        return mongoTemplate.count(new org.springframework.data.mongodb.core.query.Query(criteria), User.class);
     }
 
     private String normalizeEmail(String email) {

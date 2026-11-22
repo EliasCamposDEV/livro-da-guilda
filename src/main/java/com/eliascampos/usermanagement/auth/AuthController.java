@@ -73,20 +73,22 @@ public class AuthController {
     @PostMapping("/login")
     public TokenResponse login(@Valid @RequestBody LoginRequest request, HttpServletRequest httpRequest) {
         String key = request.email().trim().toLowerCase(Locale.ROOT) + "@" + httpRequest.getRemoteAddr();
-        loginRateLimiter.check(key);
+        synchronized (loginRateLimiter.lock(key)) {
+            loginRateLimiter.check(key);
 
-        Authentication authentication;
-        try {
-            authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(request.email(), request.password()));
-        } catch (AuthenticationException ex) {
-            loginRateLimiter.recordFailure(key);
-            throw ex;
+            Authentication authentication;
+            try {
+                authentication = authenticationManager.authenticate(
+                        new UsernamePasswordAuthenticationToken(request.email(), request.password()));
+            } catch (AuthenticationException ex) {
+                loginRateLimiter.recordFailure(key);
+                throw ex;
+            }
+            loginRateLimiter.reset(key);
+
+            AppUserDetails principal = (AppUserDetails) authentication.getPrincipal();
+            return jwtService.issue(principal.getUser());
         }
-        loginRateLimiter.reset(key);
-
-        AppUserDetails principal = (AppUserDetails) authentication.getPrincipal();
-        return jwtService.issue(principal.getUser());
     }
 
     @Operation(summary = "Invalida os refresh tokens do usuário autenticado",

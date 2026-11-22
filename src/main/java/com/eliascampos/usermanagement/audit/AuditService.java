@@ -76,7 +76,7 @@ public class AuditService {
             filters.add(Criteria.where("action").is(action.name()));
         }
         if (actorEmail != null && !actorEmail.isBlank()) {
-            filters.add(Criteria.where("actorEmail").regex("^" + escapeRegex(actorEmail.trim()) + "$", "i"));
+            filters.add(Criteria.where("actorEmail").regex("^" + java.util.regex.Pattern.quote(actorEmail.trim()) + "$", "i"));
         }
         if (targetUserId != null && !targetUserId.isBlank()) {
             filters.add(Criteria.where("targetUserId").is(targetUserId.trim()));

@@ -19,6 +19,7 @@ public class LoginRateLimiter {
     private static final int MAX_TRACKED_KEYS = 10_000;
 
     private final Map<String, Attempts> attempts = new ConcurrentHashMap<>();
+    private final Map<String, Object> locks = new ConcurrentHashMap<>();
 
     public void check(String key) {
         Attempts current = attempts.get(key);
@@ -40,9 +41,15 @@ public class LoginRateLimiter {
         attempts.remove(key);
     }
 
+    /** Retorna um lock por chave para serializar check/record/reset e evitar corrida. */
+    public Object lock(String key) {
+        return locks.computeIfAbsent(key, k -> new Object());
+    }
+
     /** Zera o estado; usado pelos testes para isolar cenarios. */
     public void clear() {
         attempts.clear();
+        locks.clear();
     }
 
     private record Attempts(Instant start, int count) {

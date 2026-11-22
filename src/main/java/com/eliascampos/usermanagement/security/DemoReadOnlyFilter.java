@@ -16,6 +16,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.net.URI;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Set;
 
@@ -46,7 +48,19 @@ public class DemoReadOnlyFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
-        String path = request.getRequestURI();
+        // Decodifica e normaliza o caminho para evitar bypass por URL encoding
+        // (ex.: /auth/%66orgot-password) ou barras duplicadas.
+        String rawPath = request.getRequestURI();
+        String path;
+        try {
+            path = URLDecoder.decode(rawPath, StandardCharsets.UTF_8);
+        } catch (IllegalArgumentException ex) {
+            path = rawPath;
+        }
+        // Colapsa barras duplicadas.
+        while (path.contains("//")) {
+            path = path.replace("//", "/");
+        }
         boolean blockedPath = path.startsWith("/api/v1/") || BLOCKED_AUTH_PATHS.contains(path);
         if (blockedPath && !SAFE_METHODS.contains(request.getMethod())) {
             writeProblem(request, response);

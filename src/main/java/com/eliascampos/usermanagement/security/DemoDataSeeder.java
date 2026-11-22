@@ -10,6 +10,7 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -63,7 +64,11 @@ public class DemoDataSeeder implements ApplicationRunner {
         User inactive = users.get(users.size() - 1);
         inactive.changeStatus(false);
 
-        userRepository.saveAll(users);
-        log.warn("Dados de demonstracao criados: {} usuarios. Login: {}", users.size(), adminEmail);
+        try {
+            userRepository.saveAll(users);
+            log.warn("Dados de demonstracao criados: {} usuarios. Login: {}", users.size(), adminEmail);
+        } catch (DuplicateKeyException ex) {
+            log.info("Dados de demonstracao ja existem; ignorado");
+        }
     }
 }

@@ -5,6 +5,11 @@ import com.eliascampos.usermanagement.auth.dto.TokenResponse;
 import com.eliascampos.usermanagement.user.User;
 import com.eliascampos.usermanagement.user.UserRepository;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
+import com.mongodb.client.result.UpdateResult;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.JwsHeader;
@@ -32,6 +37,7 @@ public class JwtService {
     private final JwtEncoder jwtEncoder;
     private final JwtDecoder refreshTokenDecoder;
     private final UserRepository userRepository;
+    private final MongoTemplate mongoTemplate;
     private final String issuer;
     private final long accessTtlSeconds;
     private final long refreshTtlSeconds;
@@ -39,12 +45,14 @@ public class JwtService {
     public JwtService(JwtEncoder jwtEncoder,
                       @Qualifier("refreshTokenDecoder") JwtDecoder refreshTokenDecoder,
                       UserRepository userRepository,
+                       MongoTemplate mongoTemplate,
                       @Value("${app.security.jwt.issuer}") String issuer,
                       @Value("${app.security.jwt.ttl-seconds}") long accessTtlSeconds,
                       @Value("${app.security.jwt.refresh-ttl-seconds}") long refreshTtlSeconds) {
         this.jwtEncoder = jwtEncoder;
         this.refreshTokenDecoder = refreshTokenDecoder;
         this.userRepository = userRepository;
+        this.mongoTemplate = mongoTemplate;
         this.issuer = issuer;
         this.accessTtlSeconds = accessTtlSeconds;
         this.refreshTtlSeconds = refreshTtlSeconds;
@@ -68,17 +76,29 @@ public class JwtService {
             throw new InvalidRefreshTokenException();
         }
 
-        // O dono do token precisa continuar existindo e ativo.
-        User user = userRepository.findByEmail(jwt.getSubject())
-                .filter(User::isActive)
-                .orElseThrow(InvalidRefreshTokenException::new);
-
-        // Rotacao: so o refresh mais recente vale. Reusar o anterior (ou um de outra sessao) falha aqui.
-        if (!String.valueOf(user.getTokenVersion()).equals(jwt.getClaimAsString(TOKEN_VERSION_CLAIM))) {
+        String email = jwt.getSubject();
+        String expectedVersion = jwt.getClaimAsString(TOKEN_VERSION_CLAIM);
+        int expected;
+        try {
+            expected = Integer.parseInt(expectedVersion);
+        } catch (NumberFormatException ex) {
             throw new InvalidRefreshTokenException();
         }
-        user.rotateTokenVersion();
-        userRepository.save(user);
+
+        // Rotacao atomica: incrementa tokenVersion apenas se o valor atual for igual
+        // ao do token (e o usuario existir e estar ativo). Evita reuso concorrente.
+        Query query = Query.query(Criteria.where("email").is(email)
+                .and("active").is(true)
+                .and("tokenVersion").is(expected));
+        Update update = new Update().inc("tokenVersion", 1);
+        UpdateResult result = mongoTemplate.updateFirst(query, update, User.class);
+        if (result.getModifiedCount() == 0) {
+            throw new InvalidRefreshTokenException();
+        }
+
+        User user = userRepository.findByEmail(email)
+                .filter(User::isActive)
+                .orElseThrow(InvalidRefreshTokenException::new);
         return issue(user);
     }
 

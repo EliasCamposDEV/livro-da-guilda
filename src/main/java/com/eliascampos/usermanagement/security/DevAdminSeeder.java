@@ -9,6 +9,7 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Component;
 
 /**
@@ -34,8 +35,12 @@ public class DevAdminSeeder implements ApplicationRunner {
         if (userRepository.count() > 0) {
             return;
         }
-        userRepository.save(new User("Admin Dev", "admin@email.com", UserRole.ADMIN,
-                passwordEncoder.encode("admin12345")));
-        log.warn("Admin de desenvolvimento criado: admin@email.com / admin12345");
+        try {
+            userRepository.save(new User("Admin Dev", "admin@email.com", UserRole.ADMIN,
+                    passwordEncoder.encode("admin12345")));
+            log.warn("Admin de desenvolvimento criado: admin@email.com / admin12345");
+        } catch (DuplicateKeyException ex) {
+            log.info("Admin de desenvolvimento ja existe; ignorado");
+        }
     }
 }
