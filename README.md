@@ -172,6 +172,8 @@ Base: `/api/v1/users`
 
 Parâmetros de listagem: `page`, `size` (máx. 50), `sort`, `search`, `role` (USER/ADMIN), `active` (true/false).
 
+`GET /api/v1/audit` usa paginação por cursor: `cursor` (opaco, da resposta anterior) e `limit` (padrão 20, máx. 50). A resposta traz `content` e `nextCursor`, sem contagem total. Ordem fixa: `timestamp` e `_id` decrescentes.
+
 Exemplo de criação:
 
 ```bash

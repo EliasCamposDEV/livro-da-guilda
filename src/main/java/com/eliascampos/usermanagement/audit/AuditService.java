@@ -1,10 +1,11 @@
 package com.eliascampos.usermanagement.audit;
 
+import com.eliascampos.usermanagement.audit.dto.CursorPage;
+import com.eliascampos.usermanagement.exception.BusinessRuleException;
 import com.eliascampos.usermanagement.user.User;
 import com.eliascampos.usermanagement.user.UserRepository;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.Pageable;
+import org.bson.types.ObjectId;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
@@ -112,20 +113,12 @@ public class AuditService {
         }
     }
 
-    public Page<AuditEvent> findAll(AuditAction action, String actorEmail, String targetUserId,
-                                   Instant from, Instant to, Pageable pageable) {
-        java.util.Set<String> allowedSortFields = java.util.Set.of(
-                "timestamp", "action", "actorEmail", "targetUserId", "targetUserEmail"
-        );
-        java.util.List<org.springframework.data.domain.Sort.Order> safeOrders = pageable.getSort().stream()
-                .filter(order -> allowedSortFields.contains(order.getProperty()))
-                .toList();
-        org.springframework.data.domain.Sort safeSort = safeOrders.isEmpty()
-                ? org.springframework.data.domain.Sort.unsorted()
-                : org.springframework.data.domain.Sort.by(safeOrders);
-        pageable = org.springframework.data.domain.PageRequest.of(
-                pageable.getPageNumber(), pageable.getPageSize(), safeSort
-        );
+    public CursorPage<AuditEvent> findAll(AuditAction action, String actorEmail, String targetUserId,
+                                          Instant from, Instant to, String cursor, int limit) {
+        if (limit < 1 || limit > 50) {
+            throw new BusinessRuleException("limit deve estar entre 1 e 50");
+        }
+        AuditCursor after = cursor == null || cursor.isBlank() ? null : AuditCursor.decode(cursor);
 
         List<Criteria> filters = new ArrayList<>();
 
@@ -144,16 +137,28 @@ public class AuditService {
         if (to != null) {
             filters.add(Criteria.where("timestamp").lte(to));
         }
+        if (after != null) {
+            filters.add(new Criteria().orOperator(
+                    Criteria.where("timestamp").lt(after.timestamp()),
+                    new Criteria().andOperator(
+                            Criteria.where("timestamp").is(after.timestamp()),
+                            Criteria.where("_id").lt(new ObjectId(after.id())))));
+        }
 
         Criteria criteria = filters.isEmpty()
                 ? new Criteria()
                 : new Criteria().andOperator(filters.toArray(Criteria[]::new));
+        Query query = new Query(criteria)
+                .with(Sort.by(Sort.Order.desc("timestamp"), Sort.Order.desc("_id")))
+                .limit(limit + 1);
 
-        long total = mongoTemplate.count(new Query(criteria), AuditEvent.class);
-        List<AuditEvent> events = mongoTemplate.find(new Query(criteria).with(pageable), AuditEvent.class);
+        List<AuditEvent> found = mongoTemplate.find(query, AuditEvent.class);
+        boolean hasMore = found.size() > limit;
+        List<AuditEvent> content = hasMore ? found.subList(0, limit) : found;
+        String nextCursor = hasMore && !content.isEmpty()
+                ? AuditCursor.encode(content.get(content.size() - 1))
+                : null;
 
-        return new PageImpl<>(events, pageable, total);
+        return new CursorPage<>(content, nextCursor);
     }
-
-
 }

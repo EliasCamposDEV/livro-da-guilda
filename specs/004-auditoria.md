@@ -1,6 +1,6 @@
 # Spec 004 - Auditoria de ações administrativas
 
-Status: implementada em 2026-11-22. Critérios de aceite validados por testes unitários e de integração (MongoDB embarcado (dev/test) e Testcontainers (2 testes de integracao)).
+Status: implementada em 2026-11-22. Critérios de aceite validados por testes unitários e de integração (MongoDB embarcado (dev/test) e Testcontainers (4 testes de integracao)).
 
 ## Contexto
 Operações administrativas (criação, edição, ativação, exclusão de usuários, troca de senha, logout, recuperação de senha) precisam ser rastreáveis para compliance e investigação. A auditoria registra quem fez, sobre quem, quando, de onde (IP) e detalhes da ação.
@@ -17,7 +17,7 @@ Persistir eventos de auditoria em coleção dedicada e expor listagem paginada/f
 ## Requisitos funcionais
 - RF1: Toda ação administrativa gera um `AuditEvent` com: ação, ator (e-mail + papel), usuário afetado (id + e-mail), detalhes, IP, timestamp.
 - RF2: Em rotas públicas (recuperação de senha), o ator é `system`/`SYSTEM`, nunca `anonymousUser`.
-- RF3: `GET /api/v1/audit` (ADMIN) lista eventos com filtros: `action`, `actorEmail`, `targetUserId`, `from`, `to` (ISO-8601), paginação (`page`, `size`, `sort`).
+- RF3: `GET /api/v1/audit` (ADMIN) lista eventos com filtros: `action`, `actorEmail`, `targetUserId`, `from`, `to` (ISO-8601) e paginação por cursor (`cursor`, `limit` de 1 a 50).
 - RF4: IP capturado do request (`getRemoteAddr`).
 - RF5: Detalhes nunca incluem token, hash ou senha.
 - RF6: Ações auditadas: `USER_CREATED`, `USER_UPDATED`, `USER_STATUS_CHANGED`, `USER_DELETED`, `PASSWORD_CHANGED`, `PASSWORD_RESET_REQUESTED`, `PASSWORD_RESET_COMPLETED`, `USER_LOGGED_OUT`.
@@ -25,14 +25,14 @@ Persistir eventos de auditoria em coleção dedicada e expor listagem paginada/f
 ## Requisitos nao funcionais
 - RNF1: Eventos persistidos em coleção `auditoria` (MongoDB).
 - RNF2: Busca por `actorEmail` é case-insensitive com escaping seguro (sem injeção de regex).
-- RNF3: Paginação padrão: size 20, sort `timestamp` desc.
+- RNF3: Paginação por keyset: `limit` padrão 20, ordem fixa `timestamp` desc e `_id` desc, `nextCursor` opaco. Sem `count` na listagem.
 - RNF4: Filtros combináveis (AND).
 - RNF5: Falhas de auditoria são registradas em log e não mascaram a operação principal.
 
 ## Endpoints
 | Método | Rota | Descrição | Auth | Sucesso |
 |--------|------|-----------|------|---------|
-| GET | /api/v1/audit | Lista eventos com filtros | ADMIN | 200 |
+| GET | /api/v1/audit | Lista eventos com filtros e cursor | ADMIN | 200 |
 
 ## Fluxo
 ### Registro
@@ -42,8 +42,9 @@ Persistir eventos de auditoria em coleção dedicada e expor listagem paginada/f
 4. IP obtido de `RequestContextHolder`; salva o evento.
 
 ### Listagem
-1. Aplica filtros (action, actorEmail regex case-insensitive, targetUserId, from/to).
-2. Pagina e ordena; retorna `PageResponse<AuditEventResponse>`.
+1. Aplica filtros (action, actorEmail, targetUserId, from/to) e, se houver cursor, `timestamp`/`_id` menores que os do cursor.
+2. Busca `limit + 1` eventos ordenados por `timestamp` e `_id` decrescentes; descarta o extra para saber se há próxima página.
+3. Retorna `CursorPage<AuditEventResponse>` com `content` e `nextCursor` (nulo na última página).
 
 ## Regras de negocio
 - Auditoria de solicitação de reset só existe para usuário ativo encontrado (e-mail inexistente não gera evento).
@@ -62,19 +63,20 @@ Nenhuma propriedade específica. Usa o MongoDB padrão da aplicação.
 |--------|--------|--------|
 | 401 | UNAUTHORIZED | Token ausente/inválido |
 | 403 | ACCESS_DENIED | Sem papel ADMIN |
-| 400 | INVALID_REQUEST | Parâmetro inválido (ex.: sort) |
+| 400 | INVALID_REQUEST | Cursor opaco inválido ou `limit` fora de 1 a 50 |
 
 ## Testes esperados
 - Eventos são criados nas ações administrativas.
 - `PASSWORD_RESET_REQUESTED`/`COMPLETED` com ator `system`, IP e alvo corretos, sem token/hash nos detalhes.
 - Listagem filtra por action, actorEmail, targetUserId, período.
-- Paginação e ordenação funcionam.
+- Paginação por cursor percorre todos os eventos sem repetir e não expõe contagem total.
+- Cursor inválido e `limit` fora de 1 a 50 retornam 400.
 - `USER` recebe 403.
 
 ## Critérios de aceite
 - [x] Eventos registrados para todas as ações administrativas.
 - [x] Ator correto em rotas públicas (`system`).
-- [x] Listagem filtrada e paginada para ADMIN.
+- [x] Listagem filtrada e paginada por cursor para ADMIN (sem `count`).
 - [x] Detalhes sem segredos.
 - [x] IP capturado.
 
@@ -82,7 +84,7 @@ Nenhuma propriedade específica. Usa o MongoDB padrão da aplicação.
 - Sem política de retenção; coleção pode crescer indefinidamente.
 - Erro ao salvar evento propaga 500 e pode mascarar a operação principal.
 - Sem transação entre operação principal e auditoria.
-- Contagem/página podem divergir sob escritas concorrentes.
+- Sem total de registros: clientes percorrem `nextCursor` até ficar nulo.
 
 ## Decisões
 - `recordSystem` separado de `record`: evita gravar `anonymousUser` em rotas públicas.

@@ -1,7 +1,7 @@
 package com.eliascampos.usermanagement.audit;
 
 import com.eliascampos.usermanagement.audit.dto.AuditEventResponse;
-import com.eliascampos.usermanagement.user.dto.PageResponse;
+import com.eliascampos.usermanagement.audit.dto.CursorPage;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -10,16 +10,11 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
-import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springdoc.core.annotations.ParameterObject;
 
 import java.time.Instant;
 
@@ -36,9 +31,13 @@ public class AuditController {
     }
 
     @Operation(summary = "Lista eventos de auditoria",
-            description = "Somente ADMIN. Permite filtrar por acao, autor, usuario afetado e periodo.")
+            description = "Somente ADMIN. Filtros por acao, autor, usuario afetado e periodo. "
+                    + "Paginação por cursor: use nextCursor da resposta; sem contagem total.")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Pagina de eventos"),
+            @ApiResponse(responseCode = "200", description = "Pagina de eventos com nextCursor"),
+            @ApiResponse(responseCode = "400", description = "Cursor ou limit invalido",
+                    content = @Content(mediaType = "application/problem+json",
+                            schema = @Schema(implementation = com.eliascampos.usermanagement.exception.ApiError.class))),
             @ApiResponse(responseCode = "401", description = "Token ausente ou invalido",
                     content = @Content(mediaType = "application/problem+json",
                             schema = @Schema(implementation = com.eliascampos.usermanagement.exception.ApiError.class))),
@@ -47,7 +46,7 @@ public class AuditController {
                             schema = @Schema(implementation = com.eliascampos.usermanagement.exception.ApiError.class)))
     })
     @GetMapping
-    public ResponseEntity<PageResponse<AuditEventResponse>> findAll(
+    public ResponseEntity<CursorPage<AuditEventResponse>> findAll(
             @Parameter(description = "Filtra por tipo de acao")
             @RequestParam(required = false) AuditAction action,
             @Parameter(description = "Filtra por e-mail de quem executou a acao")
@@ -58,11 +57,15 @@ public class AuditController {
             @RequestParam(required = false) Instant from,
             @Parameter(description = "Data final (ISO-8601)")
             @RequestParam(required = false) Instant to,
-            @ParameterObject
-            @PageableDefault(size = 20, sort = "timestamp", direction = Sort.Direction.DESC) Pageable pageable) {
+            @Parameter(description = "Cursor opaco da pagina anterior")
+            @RequestParam(required = false) String cursor,
+            @Parameter(description = "Quantidade maxima de eventos (1 a 50)")
+            @RequestParam(defaultValue = "20") int limit) {
 
-        Page<AuditEventResponse> page = auditService.findAll(action, actorEmail, targetUserId, from, to, pageable)
-                .map(AuditEventResponse::from);
-        return ResponseEntity.ok(PageResponse.from(page));
+        CursorPage<AuditEvent> page = auditService.findAll(
+                action, actorEmail, targetUserId, from, to, cursor, limit);
+        return ResponseEntity.ok(new CursorPage<>(
+                page.content().stream().map(AuditEventResponse::from).toList(),
+                page.nextCursor()));
     }
 }

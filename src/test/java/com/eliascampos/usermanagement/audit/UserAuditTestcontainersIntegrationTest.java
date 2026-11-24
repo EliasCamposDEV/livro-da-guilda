@@ -85,7 +85,7 @@ class UserAuditTestcontainersIntegrationTest {
         mockMvc.perform(get("/api/v1/audit")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content.length()").value(1))
                 .andExpect(jsonPath("$.content[0].action").value("USER_CREATED"))
                 .andExpect(jsonPath("$.content[0].actorEmail").value(ADMIN_EMAIL))
                 .andExpect(jsonPath("$.content[0].targetUserEmail").value("usuario.tc@email.com"));
@@ -104,12 +104,65 @@ class UserAuditTestcontainersIntegrationTest {
         mockMvc.perform(get("/api/v1/audit").param("actorEmail", ADMIN_EMAIL)
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.totalElements").value(org.hamcrest.Matchers.greaterThanOrEqualTo(1)));
+                .andExpect(jsonPath("$.content.length()").value(org.hamcrest.Matchers.greaterThanOrEqualTo(1)));
 
         mockMvc.perform(get("/api/v1/audit").param("actorEmail", "ninguem@email.com")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.totalElements").value(0));
+                .andExpect(jsonPath("$.content.length()").value(0));
+    }
+
+    @Test
+    void shouldPageAuditByCursorWithoutCounting() throws Exception {
+        createUser("cursor1@email.com");
+        createUser("cursor2@email.com");
+        createUser("cursor3@email.com");
+
+        var firstResult = mockMvc.perform(get("/api/v1/audit").param("limit", "2")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(2))
+                .andExpect(jsonPath("$.nextCursor").isNotEmpty())
+                .andExpect(jsonPath("$.totalElements").doesNotExist())
+                .andReturn();
+
+        String cursor = objectMapper.readTree(firstResult.getResponse().getContentAsString())
+                .get("nextCursor").asText();
+
+        var secondResult = mockMvc.perform(get("/api/v1/audit")
+                        .param("limit", "2").param("cursor", cursor)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.nextCursor").doesNotExist())
+                .andReturn();
+
+        var first = objectMapper.readTree(firstResult.getResponse().getContentAsString()).get("content");
+        var second = objectMapper.readTree(secondResult.getResponse().getContentAsString()).get("content");
+        assertThat(first.get(0).get("id").asText()).isNotEqualTo(second.get(0).get("id").asText());
+    }
+
+    @Test
+    void shouldRejectInvalidCursorAndLimit() throws Exception {
+        mockMvc.perform(get("/api/v1/audit").param("cursor", "???")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
+
+        mockMvc.perform(get("/api/v1/audit").param("limit", "0")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
+    }
+
+    private void createUser(String email) throws Exception {
+        mockMvc.perform(post("/api/v1/users")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(Map.of(
+                                "name", "Cursor User", "email", email,
+                                "role", "USER", "password", "senha12345"))))
+                .andExpect(status().isCreated());
     }
 
     private String login(String email, String password) throws Exception {
