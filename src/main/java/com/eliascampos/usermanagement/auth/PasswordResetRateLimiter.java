@@ -63,8 +63,13 @@ public class PasswordResetRateLimiter {
     }
 
     private void evictExpiredIfNeeded(Instant now) {
-        if (attempts.size() > MAX_TRACKED_KEYS) {
-            attempts.entrySet().removeIf(entry -> entry.getValue().expired(now));
+        if (attempts.size() < MAX_TRACKED_KEYS) {
+            return;
+        }
+
+        attempts.entrySet().removeIf(entry -> entry.getValue().expired(now));
+        if (attempts.size() >= MAX_TRACKED_KEYS) {
+            attempts.clear();
         }
     }
 

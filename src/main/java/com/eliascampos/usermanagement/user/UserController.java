@@ -16,6 +16,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Size;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -62,7 +63,7 @@ public class UserController {
     @GetMapping
     public PageResponse<UserResponse> findAll(
             @Parameter(description = "Texto para buscar em nome e e-mail (case-insensitive)")
-            @RequestParam(required = false) String search,
+            @RequestParam(required = false) @Size(max = 100, message = "Busca muito longa") String search,
             @Parameter(description = "Filtra por papel: USER ou ADMIN")
             @RequestParam(required = false) UserRole role,
             @Parameter(description = "Filtra por status: true (ativo) ou false (inativo)")

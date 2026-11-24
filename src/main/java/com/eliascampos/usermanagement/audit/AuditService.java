@@ -10,6 +10,8 @@ import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
@@ -21,6 +23,8 @@ import java.util.Map;
 
 @Service
 public class AuditService {
+
+    private static final Logger log = LoggerFactory.getLogger(AuditService.class);
 
     private final AuditEventRepository auditEventRepository;
     private final MongoTemplate mongoTemplate;
@@ -65,11 +69,28 @@ public class AuditService {
 
         AuditEvent event = new AuditEvent(actorEmail, actorRole, action, targetUserId,
                 targetUserEmail, details, ip);
-        auditEventRepository.save(event);
+        try {
+            auditEventRepository.save(event);
+        } catch (RuntimeException ex) {
+            log.error("Falha ao registrar auditoria {}: {}", action, ex.getMessage());
+        }
     }
 
     public Page<AuditEvent> findAll(AuditAction action, String actorEmail, String targetUserId,
                                    Instant from, Instant to, Pageable pageable) {
+        java.util.Set<String> allowedSortFields = java.util.Set.of(
+                "timestamp", "action", "actorEmail", "targetUserId", "targetUserEmail"
+        );
+        java.util.List<org.springframework.data.domain.Sort.Order> safeOrders = pageable.getSort().stream()
+                .filter(order -> allowedSortFields.contains(order.getProperty()))
+                .toList();
+        org.springframework.data.domain.Sort safeSort = safeOrders.isEmpty()
+                ? org.springframework.data.domain.Sort.unsorted()
+                : org.springframework.data.domain.Sort.by(safeOrders);
+        pageable = org.springframework.data.domain.PageRequest.of(
+                pageable.getPageNumber(), pageable.getPageSize(), safeSort
+        );
+
         List<Criteria> filters = new ArrayList<>();
 
         if (action != null) {
@@ -98,7 +119,5 @@ public class AuditService {
         return new PageImpl<>(events, pageable, total);
     }
 
-    private String escapeRegex(String value) {
-        return value.replaceAll("([\\\\.\\\\*\\\\+\\\\?\\\\^\\\\$\\\\{\\\\}\\\\(\\\\)\\\\|\\\\[\\\\]\\\\\\\\])", "\\\\$1");
-    }
+
 }

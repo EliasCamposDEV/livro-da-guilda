@@ -87,6 +87,8 @@ public class AuthController {
             loginRateLimiter.reset(key);
 
             AppUserDetails principal = (AppUserDetails) authentication.getPrincipal();
+            // Um novo login derruba refresh tokens emitidos anteriormente.
+            userService.onSuccessfulLogin(principal.getUser());
             return jwtService.issue(principal.getUser());
         }
     }

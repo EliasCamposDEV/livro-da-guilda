@@ -1,6 +1,6 @@
 package com.eliascampos.usermanagement.security;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -34,9 +34,8 @@ public class DemoReadOnlyFilter extends OncePerRequestFilter {
 
     static final String CODE = "READ_ONLY_DEMO";
     private static final Set<String> SAFE_METHODS = Set.of("GET", "HEAD", "OPTIONS");
-    private static final Set<String> BLOCKED_AUTH_PATHS = Set.of(
-            "/auth/forgot-password", "/auth/forgot-password/",
-            "/auth/reset-password", "/auth/reset-password/"
+    private static final Set<String> ALLOWED_WRITE_PATHS = Set.of(
+            "/auth/login", "/auth/refresh", "/auth/logout"
     );
 
     private final ObjectMapper objectMapper;
@@ -61,8 +60,10 @@ public class DemoReadOnlyFilter extends OncePerRequestFilter {
         while (path.contains("//")) {
             path = path.replace("//", "/");
         }
-        boolean blockedPath = path.startsWith("/api/v1/") || BLOCKED_AUTH_PATHS.contains(path);
-        if (blockedPath && !SAFE_METHODS.contains(request.getMethod())) {
+        String method = request.getMethod();
+        boolean allowedWrite = SAFE_METHODS.contains(method)
+                || ("POST".equals(method) && ALLOWED_WRITE_PATHS.contains(path));
+        if (!allowedWrite) {
             writeProblem(request, response);
             return;
         }

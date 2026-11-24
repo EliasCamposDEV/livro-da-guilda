@@ -1,6 +1,7 @@
 package com.eliascampos.usermanagement.auth.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import com.eliascampos.usermanagement.validation.MaxBytes;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
@@ -14,6 +15,7 @@ public record ResetPasswordRequest(
         @Schema(description = "Nova senha, entre 8 e 72 caracteres", example = "novaSenha123")
         @NotBlank(message = "A nova senha e obrigatoria")
         @Size(min = 8, max = 72, message = "A nova senha deve ter entre 8 e 72 caracteres")
+        @MaxBytes(72)
         String newPassword
 ) {
 }

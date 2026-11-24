@@ -14,7 +14,9 @@ import com.eliascampos.usermanagement.user.dto.UserUpdateRequest;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
@@ -72,6 +74,19 @@ public class UserService {
     }
 
     public PageResponse<UserResponse> findAll(String search, UserRole role, Boolean active, Pageable pageable) {
+        // Limita a ordenacao a campos indexados e seguros, evitando sort por
+        // campos sensiveis (ex.: passwordHash) ou full scan em campos sem indice.
+        java.util.Set<String> allowedSortFields = java.util.Set.of(
+                "name", "email", "role", "active", "createdAt", "updatedAt"
+        );
+        java.util.List<Sort.Order> safeOrders = pageable.getSort().stream()
+                .filter(order -> allowedSortFields.contains(order.getProperty()))
+                .toList();
+        Sort safeSort = safeOrders.isEmpty() ? Sort.unsorted() : Sort.by(safeOrders);
+        Pageable safePageable = PageRequest.of(
+                pageable.getPageNumber(), pageable.getPageSize(), safeSort
+        );
+
         List<Criteria> filters = new ArrayList<>();
 
         if (StringUtils.hasText(search)) {
@@ -93,7 +108,7 @@ public class UserService {
                 : new Criteria().andOperator(filters.toArray(Criteria[]::new));
 
         long total = mongoTemplate.count(new Query(criteria), User.class);
-        List<User> users = mongoTemplate.find(new Query(criteria).with(pageable), User.class);
+        List<User> users = mongoTemplate.find(new Query(criteria).with(safePageable), User.class);
 
         Page<UserResponse> page = new PageImpl<>(
                 users.stream().map(UserResponse::from).toList(),
@@ -114,6 +129,12 @@ public class UserService {
         String oldName = user.getName();
         String oldEmail = user.getEmail();
         UserRole oldRole = user.getRole();
+
+        if (user.getRole() == UserRole.ADMIN && request.role() != UserRole.ADMIN
+                && user.isActive() && countActiveAdmins() <= 1) {
+            throw new com.eliascampos.usermanagement.exception.BusinessRuleException(
+                    "Nao e possivel rebaixar o ultimo administrador ativo");
+        }
 
         user.update(request.name().trim(), email, request.role());
         if (!oldEmail.equals(email)) {
@@ -143,7 +164,7 @@ public class UserService {
         // Evita auto-desativacao e lockout do ultimo ADMIN.
         if (!request.active()) {
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-            if (auth != null && auth.getName() != null && auth.getName().equalsIgnoreCase(user.getEmail())) {
+            if (auth != null && auth.getName() != null && auth.getName().equals(user.getId())) {
                 throw new com.eliascampos.usermanagement.exception.BusinessRuleException("Nao e possivel desativar o proprio usuario");
             }
             if (user.getRole() == UserRole.ADMIN && countActiveAdmins() <= 1) {
@@ -153,6 +174,9 @@ public class UserService {
 
         boolean oldActive = user.isActive();
         user.changeStatus(request.active());
+        if (!request.active()) {
+            user.rotateTokenVersion();
+        }
         User saved = userRepository.save(user);
         auditService.record(AuditAction.USER_STATUS_CHANGED, saved, Map.of(
                 "active", Map.of("from", oldActive, "to", saved.isActive())
@@ -171,16 +195,21 @@ public class UserService {
             throw new com.eliascampos.usermanagement.exception.BusinessRuleException("Nao e possivel excluir o ultimo administrador ativo");
         }
 
+        userRepository.delete(user);
         auditService.record(AuditAction.USER_DELETED, user, Map.of(
                 "name", user.getName(),
                 "email", user.getEmail(),
                 "role", user.getRole().name()
         ));
-        userRepository.delete(user);
     }
 
-    public void changePassword(String email, ChangePasswordRequest request) {
-        User user = userRepository.findByEmail(email)
+    public void onSuccessfulLogin(User user) {
+        user.rotateTokenVersion();
+        userRepository.save(user);
+    }
+
+    public void changePassword(String userId, ChangePasswordRequest request) {
+        User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario autenticado nao encontrado"));
 
         if (!passwordEncoder.matches(request.currentPassword(), user.getPasswordHash())) {
@@ -196,8 +225,8 @@ public class UserService {
         ));
     }
 
-    public void logout(String email) {
-        userRepository.findByEmail(email).ifPresent(user -> {
+    public void logout(String userId) {
+        userRepository.findById(userId).ifPresent(user -> {
             user.rotateTokenVersion();
             User saved = userRepository.save(user);
             auditService.record(AuditAction.USER_LOGGED_OUT, saved, Map.of(

@@ -1,6 +1,6 @@
 package com.eliascampos.usermanagement.security;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockFilterChain;
@@ -14,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class DemoReadOnlyFilterTest {
 
-    private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
+    private final ObjectMapper objectMapper = new ObjectMapper();
     private final DemoReadOnlyFilter filter = new DemoReadOnlyFilter(objectMapper);
 
     @Test
@@ -55,8 +55,8 @@ class DemoReadOnlyFilterTest {
     }
 
     @Test
-    void shouldIgnoreWritesOutsideTheApi() throws Exception {
-        assertPasses("POST", "/actuator/health");
+    void shouldBlockWritesOutsideTheApi() throws Exception {
+        assertBlocked("POST", "/actuator/health");
     }
 
     private void assertPasses(String method, String uri) throws Exception {

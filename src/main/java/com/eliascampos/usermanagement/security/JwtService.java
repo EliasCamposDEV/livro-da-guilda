@@ -46,7 +46,8 @@ public class JwtService {
                       @Qualifier("refreshTokenDecoder") JwtDecoder refreshTokenDecoder,
                       UserRepository userRepository,
                        MongoTemplate mongoTemplate,
-                      @Value("${app.security.jwt.issuer}") String issuer,
+                      @Value("${app.security.jwt.secret}") String secret,
+@Value("${app.security.jwt.issuer}") String issuer,
                       @Value("${app.security.jwt.ttl-seconds}") long accessTtlSeconds,
                       @Value("${app.security.jwt.refresh-ttl-seconds}") long refreshTtlSeconds) {
         this.jwtEncoder = jwtEncoder;
@@ -56,6 +57,9 @@ public class JwtService {
         this.issuer = issuer;
         this.accessTtlSeconds = accessTtlSeconds;
         this.refreshTtlSeconds = refreshTtlSeconds;
+        if (secret == null || secret.length() < 32) {
+            throw new IllegalStateException("JWT_SECRET deve ter pelo menos 32 caracteres");
+        }
     }
 
     public TokenResponse issue(User user) {
@@ -76,7 +80,7 @@ public class JwtService {
             throw new InvalidRefreshTokenException();
         }
 
-        String email = jwt.getSubject();
+        String userId = jwt.getSubject();
         String expectedVersion = jwt.getClaimAsString(TOKEN_VERSION_CLAIM);
         int expected;
         try {
@@ -87,7 +91,7 @@ public class JwtService {
 
         // Rotacao atomica: incrementa tokenVersion apenas se o valor atual for igual
         // ao do token (e o usuario existir e estar ativo). Evita reuso concorrente.
-        Query query = Query.query(Criteria.where("email").is(email)
+        Query query = Query.query(Criteria.where("_id").is(userId)
                 .and("active").is(true)
                 .and("tokenVersion").is(expected));
         Update update = new Update().inc("tokenVersion", 1);
@@ -96,7 +100,7 @@ public class JwtService {
             throw new InvalidRefreshTokenException();
         }
 
-        User user = userRepository.findByEmail(email)
+        User user = userRepository.findById(userId)
                 .filter(User::isActive)
                 .orElseThrow(InvalidRefreshTokenException::new);
         return issue(user);
@@ -105,7 +109,7 @@ public class JwtService {
     private String encode(User user, String type, Instant issuedAt, long ttlSeconds) {
         JwtClaimsSet.Builder claims = JwtClaimsSet.builder()
                 .issuer(issuer)
-                .subject(user.getEmail())
+                .subject(user.getId())
                 .issuedAt(issuedAt)
                 .expiresAt(issuedAt.plusSeconds(ttlSeconds))
                 .claim(TOKEN_TYPE_CLAIM, type)

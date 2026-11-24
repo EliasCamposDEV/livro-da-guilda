@@ -1,6 +1,7 @@
 package com.eliascampos.usermanagement.user;
 
 import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.Version;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
@@ -34,6 +35,9 @@ public class User {
     private Instant createdAt;
 
     private Instant updatedAt;
+
+    @Version
+    private Long version;
 
     protected User() {
         // Construtor exigido pelo Spring Data MongoDB.

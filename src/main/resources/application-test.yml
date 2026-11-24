@@ -7,6 +7,8 @@ de:
 # Os testes usam um notifier de captura quando precisam ler o token.
 app:
   security:
+    jwt:
+      secret: test-secret-with-at-least-32-characters-0123
     password-reset:
       delivery: log
 

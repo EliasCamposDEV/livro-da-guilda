@@ -95,7 +95,7 @@ Expor `/api/v1/users` (CRUD, paginação, busca, filtros) e `/api/v1/me/password
 |--------|--------|--------|
 | 400 | VALIDATION_ERROR | Corpo inválido |
 | 400 | INVALID_REQUEST | Regra de negócio (self/último admin) |
-| 401 | INVALID_CREDENTIALS | Token ausente/inválido |
+| 401 | UNAUTHORIZED | Token ausente/inválido |
 | 403 | ACCESS_DENIED | Sem papel ADMIN |
 | 403 | READ_ONLY_DEMO | Demo, em escrita |
 | 404 | RESOURCE_NOT_FOUND | Usuário inexistente |

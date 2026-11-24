@@ -23,11 +23,11 @@ Persistir eventos de auditoria em coleção dedicada e expor listagem paginada/f
 - RF6: Ações auditadas: `USER_CREATED`, `USER_UPDATED`, `USER_STATUS_CHANGED`, `USER_DELETED`, `PASSWORD_CHANGED`, `PASSWORD_RESET_REQUESTED`, `PASSWORD_RESET_COMPLETED`, `USER_LOGGED_OUT`.
 
 ## Requisitos nao funcionais
-- RNF1: Eventos persistidos em coleção `audit_events` (MongoDB).
+- RNF1: Eventos persistidos em coleção `auditoria` (MongoDB).
 - RNF2: Busca por `actorEmail` é case-insensitive com escaping seguro (sem injeção de regex).
 - RNF3: Paginação padrão: size 20, sort `timestamp` desc.
 - RNF4: Filtros combináveis (AND).
-- RNF5: Erros de auditoria não devem mascarar a operação principal? (atualmente propagam 500; ver Limitações).
+- RNF5: Falhas de auditoria são registradas em log e não mascaram a operação principal.
 
 ## Endpoints
 | Método | Rota | Descrição | Auth | Sucesso |
@@ -60,7 +60,7 @@ Nenhuma propriedade específica. Usa o MongoDB padrão da aplicação.
 ## Erros esperados
 | Status | Código | Quando |
 |--------|--------|--------|
-| 401 | INVALID_CREDENTIALS | Token ausente/inválido |
+| 401 | UNAUTHORIZED | Token ausente/inválido |
 | 403 | ACCESS_DENIED | Sem papel ADMIN |
 | 400 | INVALID_REQUEST | Parâmetro inválido (ex.: sort) |
 

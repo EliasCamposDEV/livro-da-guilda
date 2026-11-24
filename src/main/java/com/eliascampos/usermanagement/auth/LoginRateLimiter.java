@@ -29,16 +29,16 @@ public class LoginRateLimiter {
     }
 
     public void recordFailure(String key) {
-        if (attempts.size() > MAX_TRACKED_KEYS) {
-            attempts.values().removeIf(Attempts::expired);
-        }
+        evictIfNeeded();
         attempts.compute(key, (ignored, previous) -> previous == null || previous.expired()
                 ? new Attempts(Instant.now(), 1)
                 : new Attempts(previous.start(), previous.count() + 1));
+        locks.computeIfAbsent(key, k -> new Object());
     }
 
     public void reset(String key) {
         attempts.remove(key);
+        locks.remove(key);
     }
 
     /** Retorna um lock por chave para serializar check/record/reset e evitar corrida. */
@@ -50,6 +50,23 @@ public class LoginRateLimiter {
     public void clear() {
         attempts.clear();
         locks.clear();
+    }
+
+    private void evictIfNeeded() {
+        if (attempts.size() < MAX_TRACKED_KEYS) {
+            return;
+        }
+
+        attempts.entrySet().removeIf(entry -> entry.getValue().expired());
+        locks.keySet().removeIf(key -> {
+            Attempts current = attempts.get(key);
+            return current == null || current.expired();
+        });
+
+        if (attempts.size() >= MAX_TRACKED_KEYS) {
+            attempts.clear();
+            locks.clear();
+        }
     }
 
     private record Attempts(Instant start, int count) {

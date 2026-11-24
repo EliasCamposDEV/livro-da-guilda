@@ -11,6 +11,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatusCode;
+import org.springframework.web.context.request.WebRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
@@ -30,7 +32,7 @@ import java.util.Map;
 import java.util.Set;
 
 @RestControllerAdvice
-public class GlobalExceptionHandler {
+public class GlobalExceptionHandler extends org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
@@ -51,22 +53,37 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(problem);
     }
 
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ProblemDetail> handleValidation(MethodArgumentNotValidException ex, HttpServletRequest request) {
+    @Override
+    protected ResponseEntity<Object> handleMethodArgumentNotValid(MethodArgumentNotValidException ex,
+                                                                   HttpHeaders headers, HttpStatusCode status,
+                                                                   WebRequest request) {
         Map<String, String> errors = new LinkedHashMap<>();
         for (FieldError fieldError : ex.getBindingResult().getFieldErrors()) {
             errors.putIfAbsent(fieldError.getField(), fieldError.getDefaultMessage());
         }
 
+        HttpServletRequest servletRequest = ((org.springframework.web.context.request.ServletWebRequest) request).getRequest();
         ProblemDetail problem = problem(HttpStatus.BAD_REQUEST, "Dados invalidos",
-                "Um ou mais campos estao invalidos", request);
+                "Um ou mais campos estao invalidos", servletRequest);
         problem.setProperty("code", "VALIDATION_ERROR");
         problem.setProperty("errors", errors);
         return ResponseEntity.badRequest().body(problem);
     }
 
-    @ExceptionHandler({HttpMessageNotReadableException.class, MethodArgumentTypeMismatchException.class})
-    public ResponseEntity<ProblemDetail> handleMalformedRequest(Exception ex, HttpServletRequest request) {
+    @Override
+    protected ResponseEntity<Object> handleHttpMessageNotReadable(HttpMessageNotReadableException ex,
+                                                                  HttpHeaders headers, HttpStatusCode status,
+                                                                  WebRequest request) {
+        HttpServletRequest servletRequest = ((org.springframework.web.context.request.ServletWebRequest) request).getRequest();
+        ProblemDetail problem = problem(HttpStatus.BAD_REQUEST, "Requisicao invalida",
+                "Corpo ou parametro da requisicao invalido", servletRequest);
+        problem.setProperty("code", "INVALID_REQUEST");
+        return ResponseEntity.badRequest().body(problem);
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ProblemDetail> handleTypeMismatch(MethodArgumentTypeMismatchException ex,
+                                                           HttpServletRequest request) {
         ProblemDetail problem = problem(HttpStatus.BAD_REQUEST, "Requisicao invalida",
                 "Corpo ou parametro da requisicao invalido", request);
         problem.setProperty("code", "INVALID_REQUEST");
@@ -147,26 +164,29 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(problem);
     }
 
-    @ExceptionHandler(NoResourceFoundException.class)
-    public ResponseEntity<ProblemDetail> handleUnknownPath(HttpServletRequest request) {
+    @Override
+    protected ResponseEntity<Object> handleNoResourceFoundException(NoResourceFoundException ex, HttpHeaders headers,
+                                                                   HttpStatusCode status, WebRequest request) {
+        HttpServletRequest servletRequest = ((org.springframework.web.context.request.ServletWebRequest) request).getRequest();
         ProblemDetail problem = problem(HttpStatus.NOT_FOUND, "Recurso nao encontrado",
-                "Nao existe recurso no caminho solicitado", request);
+                "Nao existe recurso no caminho solicitado", servletRequest);
         problem.setProperty("code", "RESOURCE_NOT_FOUND");
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(problem);
     }
 
-    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
-    public ResponseEntity<ProblemDetail> handleMethodNotAllowed(HttpRequestMethodNotSupportedException ex,
-                                                               HttpServletRequest request) {
+    @Override
+    protected ResponseEntity<Object> handleHttpRequestMethodNotSupported(HttpRequestMethodNotSupportedException ex,
+                                                                         HttpHeaders headers, HttpStatusCode status,
+                                                                         WebRequest request) {
+        HttpServletRequest servletRequest = ((org.springframework.web.context.request.ServletWebRequest) request).getRequest();
         ProblemDetail problem = problem(HttpStatus.METHOD_NOT_ALLOWED, "Metodo nao permitido",
-                "O metodo " + ex.getMethod() + " nao e suportado para este recurso", request);
+                "O metodo " + ex.getMethod() + " nao e suportado para este recurso", servletRequest);
         problem.setProperty("code", "METHOD_NOT_ALLOWED");
-        ResponseEntity.BodyBuilder response = ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED);
         Set<HttpMethod> supported = ex.getSupportedHttpMethods();
         if (supported != null) {
-            response.allow(supported.toArray(HttpMethod[]::new));
+            headers.setAllow(supported);
         }
-        return response.body(problem);
+        return new ResponseEntity<>(problem, headers, HttpStatus.METHOD_NOT_ALLOWED);
     }
 
     @ExceptionHandler(Exception.class)

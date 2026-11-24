@@ -1,12 +1,13 @@
 package com.eliascampos.usermanagement.audit;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -26,6 +27,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @Testcontainers
+@ActiveProfiles("test")
 @SpringBootTest(properties = "spring.autoconfigure.exclude=de.flapdoodle.embed.mongo.spring.autoconfigure.EmbeddedMongoAutoConfiguration")
 @AutoConfigureMockMvc
 class UserAuditTestcontainersIntegrationTest {
@@ -51,12 +53,16 @@ class UserAuditTestcontainersIntegrationTest {
     private com.eliascampos.usermanagement.user.UserRepository userRepository;
 
     @Autowired
+    private com.eliascampos.usermanagement.audit.AuditEventRepository auditEventRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     private String adminToken;
 
     @BeforeEach
     void setUp() throws Exception {
+        auditEventRepository.deleteAll();
         userRepository.deleteAll();
         userRepository.save(new com.eliascampos.usermanagement.user.User(
                 "Admin Teste", ADMIN_EMAIL, com.eliascampos.usermanagement.user.UserRole.ADMIN,

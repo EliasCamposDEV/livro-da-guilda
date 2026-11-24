@@ -1,11 +1,9 @@
 spring:
   application:
     name: livro-da-guilda
-  profiles:
-    default: dev
   data:
     mongodb:
-      uri: ${MONGODB_URI:mongodb://localhost:27018/usuarios}
+      uri: ${MONGODB_URI}
       auto-index-creation: true
   jackson:
     default-property-inclusion: non_null
@@ -57,7 +55,7 @@ app:
   security:
     jwt:
       # Minimo de 32 caracteres (HS256). Em producao, defina JWT_SECRET.
-      secret: ${JWT_SECRET:dev-only-secret-change-me-0123456789abcdef}
+      secret: ${JWT_SECRET}
       issuer: livro-da-guilda
       ttl-seconds: 3600
       # 7 dias: vida do refresh token usado em /auth/refresh.

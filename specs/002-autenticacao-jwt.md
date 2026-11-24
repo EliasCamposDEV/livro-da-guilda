@@ -71,8 +71,8 @@ Fornecer login com e-mail/senha, emissão de access token (1 h) e refresh token 
 
 ## Modelo de dados
 - `User`: `tokenVersion` (int, default 0). Incrementado em login/refresh/logout/troca de senha/reset de senha.
-- JWT access: subject = e-mail, claims `roles`, `type=access`.
-- JWT refresh: subject = e-mail, claims `roles`, `type=refresh`, `ver=tokenVersion`.
+- JWT access: subject = id imutável do usuário, claims `roles`, `type=access`.
+- JWT refresh: subject = id imutável do usuário, claims `roles`, `type=refresh`, `ver=tokenVersion`.
 
 ## Configuracao
 | Propriedade | Padrão | Uso |

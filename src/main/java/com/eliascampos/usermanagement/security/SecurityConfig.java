@@ -1,6 +1,6 @@
 package com.eliascampos.usermanagement.security;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -48,7 +48,8 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http, ObjectMapper objectMapper,
-                                                   @Value("${app.cors.allowed-origins:}") String allowedOrigins)
+                                                   com.eliascampos.usermanagement.user.UserRepository userRepository,
+                                                  @Value("${app.cors.allowed-origins:}") String allowedOrigins)
             throws Exception {
         configureCors(http, allowedOrigins);
         return http
@@ -66,7 +67,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/audit", "/api/v1/audit/**").hasRole("ADMIN")
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth -> oauth
-                        .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter()))
+                        .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter(userRepository)))
                         .authenticationEntryPoint((request, response, ex) -> writeProblem(objectMapper, request,
                                 response, HttpStatus.UNAUTHORIZED, "Nao autenticado",
                                 "Informe um token Bearer valido", "UNAUTHORIZED"))
@@ -134,13 +135,24 @@ public class SecurityConfig {
         http.cors(cors -> cors.configurationSource(request -> config));
     }
 
-    private JwtAuthenticationConverter jwtAuthenticationConverter() {
+    private org.springframework.core.convert.converter.Converter<org.springframework.security.oauth2.jwt.Jwt, org.springframework.security.authentication.AbstractAuthenticationToken> jwtAuthenticationConverter(com.eliascampos.usermanagement.user.UserRepository userRepository) {
         JwtGrantedAuthoritiesConverter authorities = new JwtGrantedAuthoritiesConverter();
         authorities.setAuthoritiesClaimName(ROLES_CLAIM);
         authorities.setAuthorityPrefix("ROLE_");
         JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
         converter.setJwtGrantedAuthoritiesConverter(authorities);
-        return converter;
+
+        return jwt -> {
+            org.springframework.security.authentication.AbstractAuthenticationToken authentication =
+                    converter.convert(jwt);
+            String userId = jwt.getSubject();
+            com.eliascampos.usermanagement.user.User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new org.springframework.security.authentication.BadCredentialsException("Token invalido"));
+            if (!user.isActive()) {
+                throw new org.springframework.security.authentication.DisabledException("Usuario inativo");
+            }
+            return authentication;
+        };
     }
 
     private void writeProblem(ObjectMapper mapper, HttpServletRequest request, HttpServletResponse response,

@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import com.eliascampos.usermanagement.validation.MaxBytes;
 import jakarta.validation.constraints.Size;
 
 public record UserRequest(
@@ -22,6 +23,7 @@ public record UserRequest(
         @Schema(description = "Senha em texto puro; a API armazena o hash BCrypt", example = "senha12345")
         @NotBlank(message = "A senha e obrigatoria")
         @Size(min = 8, max = 72, message = "A senha deve ter entre 8 e 72 caracteres")
+        @MaxBytes(72)
         String password,
 
         @Schema(description = "Papel do usuário: USER (comum) ou ADMIN (gerencia usuários)", example = "USER")

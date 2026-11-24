@@ -9,5 +9,7 @@ de:
 # Em dev o token de redefinicao aparece no log (marcador PASSWORD_RESET_TOKEN).
 app:
   security:
+    jwt:
+      secret: ${JWT_SECRET:dev-only-secret-change-me-0123456789abcdef}
     password-reset:
       delivery: log
