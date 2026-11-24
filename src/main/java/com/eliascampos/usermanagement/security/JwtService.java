@@ -2,6 +2,8 @@ package com.eliascampos.usermanagement.security;
 
 import com.eliascampos.usermanagement.auth.InvalidRefreshTokenException;
 import com.eliascampos.usermanagement.auth.dto.TokenResponse;
+import com.eliascampos.usermanagement.audit.AuditAction;
+import com.eliascampos.usermanagement.audit.AuditService;
 import com.eliascampos.usermanagement.user.User;
 import com.eliascampos.usermanagement.user.UserRepository;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -23,6 +25,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class JwtService {
@@ -38,6 +41,7 @@ public class JwtService {
     private final JwtDecoder refreshTokenDecoder;
     private final UserRepository userRepository;
     private final MongoTemplate mongoTemplate;
+    private final AuditService auditService;
     private final String issuer;
     private final long accessTtlSeconds;
     private final long refreshTtlSeconds;
@@ -46,6 +50,7 @@ public class JwtService {
                       @Qualifier("refreshTokenDecoder") JwtDecoder refreshTokenDecoder,
                       UserRepository userRepository,
                        MongoTemplate mongoTemplate,
+                      AuditService auditService,
                       @Value("${app.security.jwt.secret}") String secret,
 @Value("${app.security.jwt.issuer}") String issuer,
                       @Value("${app.security.jwt.ttl-seconds}") long accessTtlSeconds,
@@ -54,6 +59,7 @@ public class JwtService {
         this.refreshTokenDecoder = refreshTokenDecoder;
         this.userRepository = userRepository;
         this.mongoTemplate = mongoTemplate;
+        this.auditService = auditService;
         this.issuer = issuer;
         this.accessTtlSeconds = accessTtlSeconds;
         this.refreshTtlSeconds = refreshTtlSeconds;
@@ -97,6 +103,16 @@ public class JwtService {
         Update update = new Update().inc("tokenVersion", 1).inc("version", 1);
         UpdateResult result = mongoTemplate.updateFirst(query, update, User.class);
         if (result.getModifiedCount() == 0) {
+            try {
+                User existing = userRepository.findById(userId).orElse(null);
+                if (existing != null && existing.isActive()
+                        && existing.getTokenVersion() != expected) {
+                    auditService.recordForActor(AuditAction.REFRESH_TOKEN_REUSED, "system",
+                            existing.getId(), existing.getEmail(), Map.of("ip", "n/a"));
+                }
+            } catch (RuntimeException ignored) {
+                // auditoria nao deve mascarar o erro original
+            }
             throw new InvalidRefreshTokenException();
         }
 

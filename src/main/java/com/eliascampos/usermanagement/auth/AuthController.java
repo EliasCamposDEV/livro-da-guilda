@@ -8,6 +8,8 @@ import com.eliascampos.usermanagement.auth.dto.TokenResponse;
 import com.eliascampos.usermanagement.exception.ApiError;
 import com.eliascampos.usermanagement.security.AppUserDetails;
 import com.eliascampos.usermanagement.security.JwtService;
+import com.eliascampos.usermanagement.audit.AuditAction;
+import com.eliascampos.usermanagement.audit.AuditService;
 import com.eliascampos.usermanagement.user.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.headers.Header;
@@ -33,6 +35,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.beans.factory.annotation.Value;
 
 import java.util.Locale;
+import java.util.Map;
 
 @Tag(name = "Autenticação", description = "Login, emissão de token, refresh e recuperação de senha")
 @RestController
@@ -45,11 +48,13 @@ public class AuthController {
     private final LoginRateLimiter loginRateLimiter;
     private final PasswordResetService passwordResetService;
     private final RefreshRateLimiter refreshRateLimiter;
+    private final AuditService auditService;
     private final boolean singleSession;
 
     public AuthController(AuthenticationManager authenticationManager, JwtService jwtService,
                           UserService userService, LoginRateLimiter loginRateLimiter,
                           PasswordResetService passwordResetService, RefreshRateLimiter refreshRateLimiter,
+                          AuditService auditService,
                           @Value("${app.security.single-session:true}") boolean singleSession) {
         this.authenticationManager = authenticationManager;
         this.jwtService = jwtService;
@@ -57,6 +62,7 @@ public class AuthController {
         this.loginRateLimiter = loginRateLimiter;
         this.passwordResetService = passwordResetService;
         this.refreshRateLimiter = refreshRateLimiter;
+        this.auditService = auditService;
         this.singleSession = singleSession;
     }
 
@@ -79,9 +85,17 @@ public class AuthController {
     })
     @PostMapping("/login")
     public TokenResponse login(@Valid @RequestBody LoginRequest request, HttpServletRequest httpRequest) {
-        String key = request.email().trim().toLowerCase(Locale.ROOT) + "@" + httpRequest.getRemoteAddr();
+        String ip = httpRequest.getRemoteAddr() == null ? "unknown" : httpRequest.getRemoteAddr();
+        String key = request.email().trim().toLowerCase(Locale.ROOT) + "@" + ip;
         synchronized (loginRateLimiter.lock(key)) {
-            loginRateLimiter.check(key);
+            try {
+                loginRateLimiter.check(key);
+                loginRateLimiter.checkIp(ip);
+            } catch (TooManyAttemptsException ex) {
+                auditService.recordForActor(AuditAction.RATE_LIMITED, "system", null, request.email().trim().toLowerCase(Locale.ROOT),
+                        Map.of("endpoint", "login"));
+                throw ex;
+            }
 
             Authentication authentication;
             try {
@@ -89,6 +103,9 @@ public class AuthController {
                         new UsernamePasswordAuthenticationToken(request.email(), request.password()));
             } catch (AuthenticationException ex) {
                 loginRateLimiter.recordFailure(key);
+                loginRateLimiter.recordFailureIp(ip);
+                auditService.recordForActor(AuditAction.LOGIN_FAILED, "system", null, request.email().trim().toLowerCase(Locale.ROOT),
+                        Map.of("reason", ex.getClass().getSimpleName()));
                 throw ex;
             }
             loginRateLimiter.reset(key);
@@ -114,7 +131,10 @@ public class AuthController {
     })
     @PostMapping("/logout")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void logout(Authentication authentication) {
+    public void logout(Authentication authentication, HttpServletRequest servletRequest) {
+        String ip = servletRequest.getRemoteAddr() == null ? "unknown" : servletRequest.getRemoteAddr();
+        refreshRateLimiter.check("logout:" + ip);
+        refreshRateLimiter.record("logout:" + ip);
         userService.logout(authentication.getName(), singleSession);
     }
 

@@ -20,6 +20,8 @@ public class LoginRateLimiter {
 
     private final Map<String, Attempts> attempts = new ConcurrentHashMap<>();
     private final Map<String, Object> locks = new ConcurrentHashMap<>();
+    private final Map<String, Attempts> ipAttempts = new ConcurrentHashMap<>();
+    private static final int MAX_PER_IP = 30;
 
     public void check(String key) {
         Attempts current = attempts.get(key);
@@ -39,6 +41,20 @@ public class LoginRateLimiter {
     public void reset(String key) {
         attempts.remove(key);
         locks.remove(key);
+    }
+
+    public void checkIp(String ip) {
+        Attempts current = ipAttempts.get(ip);
+        if (current != null && !current.expired() && current.count() >= MAX_PER_IP) {
+            throw new TooManyAttemptsException(WINDOW);
+        }
+    }
+
+    public void recordFailureIp(String ip) {
+        ipAttempts.compute(ip, (ignored, previous) ->
+                previous == null || previous.expired()
+                        ? new Attempts(Instant.now(), 1)
+                        : new Attempts(previous.start(), previous.count() + 1));
     }
 
     /** Retorna um lock por chave para serializar check/record/reset e evitar corrida. */

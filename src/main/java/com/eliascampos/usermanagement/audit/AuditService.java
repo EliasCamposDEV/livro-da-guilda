@@ -30,12 +30,16 @@ public class AuditService {
     private final AuditEventRepository auditEventRepository;
     private final MongoTemplate mongoTemplate;
     private final UserRepository userRepository;
+    private final io.micrometer.core.instrument.MeterRegistry meterRegistry;
 
     public AuditService(AuditEventRepository auditEventRepository, MongoTemplate mongoTemplate,
-                        UserRepository userRepository) {
+                        UserRepository userRepository,
+                        @org.springframework.beans.factory.annotation.Autowired(required = false)
+                        io.micrometer.core.instrument.MeterRegistry meterRegistry) {
         this.auditEventRepository = auditEventRepository;
         this.mongoTemplate = mongoTemplate;
         this.userRepository = userRepository;
+        this.meterRegistry = meterRegistry;
     }
 
     public void record(AuditAction action, User target, Map<String, Object> details) {
@@ -59,9 +63,16 @@ public class AuditService {
                 actorRole = user.getRole().name();
             } else {
                 actorEmail = principalName;
-                actorRole = authentication.getAuthorities() != null
-                        ? authentication.getAuthorities().toString()
-                        : "UNKNOWN";
+                actorRole = "UNKNOWN";
+                if (authentication.getAuthorities() != null) {
+                    for (var authority : authentication.getAuthorities()) {
+                        String name = authority.getAuthority();
+                        if (name != null && name.startsWith("ROLE_")) {
+                            actorRole = name.substring("ROLE_".length());
+                            break;
+                        }
+                    }
+                }
             }
         }
 
@@ -74,6 +85,11 @@ public class AuditService {
      */
     public void recordSystem(AuditAction action, User target, Map<String, Object> details) {
         save(action, "system", "SYSTEM", target.getId(), target.getEmail(), details);
+    }
+
+    public void recordForActor(AuditAction action, String actorEmail, String targetUserId,
+                               String targetUserEmail, Map<String, Object> details) {
+        save(action, actorEmail, actorEmail.equals("system") ? "SYSTEM" : "UNKNOWN", targetUserId, targetUserEmail, details);
     }
 
     private void save(AuditAction action, String actorEmail, String actorRole,
@@ -90,6 +106,9 @@ public class AuditService {
             auditEventRepository.save(event);
         } catch (RuntimeException ex) {
             log.error("Falha ao registrar auditoria {}: {}", action, ex.getMessage());
+            if (meterRegistry != null) {
+                meterRegistry.counter("audit.write.failures", "action", action.name()).increment();
+            }
         }
     }
 
@@ -114,7 +133,7 @@ public class AuditService {
             filters.add(Criteria.where("action").is(action.name()));
         }
         if (actorEmail != null && !actorEmail.isBlank()) {
-            filters.add(Criteria.where("actorEmail").regex("^" + java.util.regex.Pattern.quote(actorEmail.trim()) + "$", "i"));
+            filters.add(Criteria.where("actorEmail").is(actorEmail.trim().toLowerCase(java.util.Locale.ROOT)));
         }
         if (targetUserId != null && !targetUserId.isBlank()) {
             filters.add(Criteria.where("targetUserId").is(targetUserId.trim()));

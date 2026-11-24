@@ -27,5 +27,14 @@ public enum AuditAction {
     PASSWORD_RESET_COMPLETED,
 
     @Schema(description = "Logout (rotacao de refresh token)")
-    USER_LOGGED_OUT
+    USER_LOGGED_OUT,
+
+    @Schema(description = "Tentativa de login falha")
+    LOGIN_FAILED,
+
+    @Schema(description = "Bloqueio por rate limit")
+    RATE_LIMITED,
+
+    @Schema(description = "Reuso de refresh token detectado")
+    REFRESH_TOKEN_REUSED
 }

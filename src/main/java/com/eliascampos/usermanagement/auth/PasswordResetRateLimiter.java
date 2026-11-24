@@ -17,6 +17,7 @@ public class PasswordResetRateLimiter {
 
     static final int MAX_PER_EMAIL_AND_IP = 5;
     static final int MAX_PER_IP = 20;
+    static final int MAX_PER_EMAIL = 10;
     static final Duration WINDOW = Duration.ofHours(1);
     private static final int MAX_TRACKED_KEYS = 10_000;
 
@@ -28,9 +29,13 @@ public class PasswordResetRateLimiter {
 
         String emailKey = emailKey(email, ipAddress);
         String ipKey = ipKey(ipAddress);
+        String accountKey = accountKey(email);
         long retryAfter = Math.max(
-                retryAfterOrZero(emailKey, MAX_PER_EMAIL_AND_IP, now),
-                retryAfterOrZero(ipKey, MAX_PER_IP, now)
+                Math.max(
+                        retryAfterOrZero(emailKey, MAX_PER_EMAIL_AND_IP, now),
+                        retryAfterOrZero(ipKey, MAX_PER_IP, now)
+                ),
+                retryAfterOrZero(accountKey, MAX_PER_EMAIL, now)
         );
         if (retryAfter > 0) {
             throw new TooManyPasswordResetRequestsException(retryAfter);
@@ -38,6 +43,7 @@ public class PasswordResetRateLimiter {
 
         increment(emailKey, now);
         increment(ipKey, now);
+        increment(accountKey, now);
     }
 
     /** Zera o estado; usado pelos testes para isolar cenarios. */
@@ -86,6 +92,10 @@ public class PasswordResetRateLimiter {
 
     private String ipKey(String ipAddress) {
         return "ip:" + ipAddress;
+    }
+
+    private String accountKey(String email) {
+        return "account:" + email;
     }
 
     private record Attempts(Instant start, int count) {
