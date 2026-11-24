@@ -22,6 +22,10 @@ management:
       show-details: never
 
 app:
+  demo:
+    admin:
+      email: ${DEMO_ADMIN_EMAIL:demo@eliascampos.dev}
+      password: ${DEMO_ADMIN_PASSWORD:demo-readonly-2026}
   security:
     jwt:
       # Sem valor padrao: a aplicacao falha ao subir se JWT_SECRET nao existir.

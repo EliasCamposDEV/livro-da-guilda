@@ -77,7 +77,8 @@ Fazer isso se houver suspeita de vazamento ou a cada ciclo de rotação definido
   instância. Com mais de uma réplica o limite é por réplica.
 - **Rate limit da recuperação de senha** é em memória: 5 solicitações por e-mail + IP
   e 20 por IP, em janela de 1 hora, por instância. Toda solicitação conta, inclusive
-  para e-mail inexistente.
+  para e-mail inexistente. Tambem ha limite de 10 solicitacoes por conta (e-mail).
+- **Rate limit do refresh** e em memoria: 30 tentativas por IP por minuto, por instancia.
 - **Refresh token**: rotativo e de sessão única por usuário (ver README). Não há
   revogação por dispositivo.
 - **CORS**: desligado por padrão; libere só as origens que consomem a API.
