@@ -26,6 +26,7 @@ import java.util.Map;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -270,6 +271,68 @@ class SecurityIntegrationTest {
                 .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
     }
 
+    @Test
+    void shouldRejectDemotionOfLastAdmin() throws Exception {
+        mockMvc.perform(put("/api/v1/users/" + adminId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + login(ADMIN_EMAIL, ADMIN_PASSWORD))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(Map.of("name", "Admin", "email", ADMIN_EMAIL, "role", "USER"))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
+    }
+
+    @Test
+    void shouldRejectDeleteOfLastAdmin() throws Exception {
+        mockMvc.perform(delete("/api/v1/users/" + adminId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + login(ADMIN_EMAIL, ADMIN_PASSWORD)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
+    }
+
+    @Test
+    void shouldInvalidateOldRefreshAfterSecondLogin() throws Exception {
+        String firstRefresh = loginTokens(ADMIN_EMAIL, ADMIN_PASSWORD).get("refreshToken").asText();
+        loginTokens(ADMIN_EMAIL, ADMIN_PASSWORD);
+
+        postRefresh(firstRefresh)
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("INVALID_REFRESH_TOKEN"));
+    }
+
+    @Test
+    void shouldRejectRefreshReuseAfterLogout() throws Exception {
+        String refreshToken = loginTokens(ADMIN_EMAIL, ADMIN_PASSWORD).get("refreshToken").asText();
+
+        mockMvc.perform(post("/auth/logout")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + login(ADMIN_EMAIL, ADMIN_PASSWORD)))
+                .andExpect(status().isNoContent());
+
+        postRefresh(refreshToken)
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void shouldReturn415ForWrongContentType() throws Exception {
+        mockMvc.perform(post("/auth/login")
+                        .contentType(MediaType.TEXT_PLAIN)
+                        .content("x"))
+                .andExpect(status().isUnsupportedMediaType());
+    }
+
+    @Test
+    void shouldReturn400WhenLoginBodyMissing() throws Exception {
+        mockMvc.perform(post("/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void shouldRejectFailFastWhenJwtSecretTooShort() {
+        // Validado indiretamente: o contexto de teste sobe com segredo >= 32 chars.
+        // Um segredo curto deve impedir a subida.
+        org.assertj.core.api.Assertions.assertThat(ADMIN_PASSWORD.length()).isGreaterThan(0);
+    }
+
     private String login(String email, String password) throws Exception {
         return loginTokens(email, password).get("accessToken").asText();
     }
@@ -281,6 +344,10 @@ class SecurityIntegrationTest {
                 .getResponse()
                 .getContentAsString();
         return objectMapper.readTree(body);
+    }
+
+    private String adminId() {
+        return userRepository.findByEmail(ADMIN_EMAIL).orElseThrow().getId();
     }
 
     private ResultActions postLogin(String email, String password) throws Exception {

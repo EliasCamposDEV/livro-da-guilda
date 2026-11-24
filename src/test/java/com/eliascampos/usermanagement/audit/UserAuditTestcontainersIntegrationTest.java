@@ -91,6 +91,27 @@ class UserAuditTestcontainersIntegrationTest {
                 .andExpect(jsonPath("$.content[0].targetUserEmail").value("usuario.tc@email.com"));
     }
 
+    @Test
+    void shouldFilterAuditByActorEmail() throws Exception {
+        mockMvc.perform(post("/api/v1/users")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "name", "Outro", "email", "outro.tc@email.com",
+                                "password", "senha12345", "role", "USER"))))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(get("/api/v1/audit").param("actorEmail", ADMIN_EMAIL)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(org.hamcrest.Matchers.greaterThanOrEqualTo(1)));
+
+        mockMvc.perform(get("/api/v1/audit").param("actorEmail", "ninguem@email.com")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(0));
+    }
+
     private String login(String email, String password) throws Exception {
         var result = mockMvc.perform(post("/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)

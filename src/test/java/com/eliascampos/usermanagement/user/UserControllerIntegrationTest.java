@@ -225,6 +225,34 @@ class UserControllerIntegrationTest {
         return objectMapper.readTree(result.getResponse().getContentAsString());
     }
 
+    @Test
+    void shouldIgnoreUnknownSortField() throws Exception {
+        mockMvc.perform(get("/api/v1/users").param("sort", "passwordHash,asc")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void shouldRejectSearchTooLong() throws Exception {
+        String longSearch = "a".repeat(101);
+        mockMvc.perform(get("/api/v1/users").param("search", longSearch)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+    }
+
+    @Test
+    void shouldRejectPasswordWithMoreThan72Bytes() throws Exception {
+        String longPassword = "a".repeat(73);
+        mockMvc.perform(post("/api/v1/users")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(Map.of("name", "X", "email", "x@email.com",
+                                "password", longPassword, "role", "USER"))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+    }
+
     private String json(Map<String, ?> value) throws Exception {
         return objectMapper.writeValueAsString(value);
     }

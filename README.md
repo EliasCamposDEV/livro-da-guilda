@@ -61,7 +61,7 @@ docker compose up --build
 
 API em http://127.0.0.1:8081, MongoDB apenas na rede interna do Compose. Para inspecionar o banco: `docker compose exec mongo mongosh usuarios`.
 
-Na primeira subida, com o banco vazio, o Compose cria o admin `admin@local.dev` / `admin12345` (dá para trocar com `BOOTSTRAP_ADMIN_EMAIL` e `BOOTSTRAP_ADMIN_PASSWORD` no shell ou no `.env`). Sem isso não haveria usuário para logar.
+Na primeira subida, com o banco vazio, defina `APP_BOOTSTRAP_ADMIN_EMAIL` e `APP_BOOTSTRAP_ADMIN_PASSWORD` para criar o primeiro `ADMIN` (dá para trocar com `BOOTSTRAP_ADMIN_EMAIL` e `BOOTSTRAP_ADMIN_PASSWORD` no shell ou no `.env`). Sem isso não haveria usuário para logar.
 
 > Os exemplos de `curl` abaixo usam a porta `8080` (perfil `dev`). Com Docker, troque por `8081`.
 
@@ -115,7 +115,8 @@ Senha atual errada devolve 400 com `code: INVALID_PASSWORD`.
 - Em `dev` um admin é criado na primeira subida: `admin@email.com` / `admin12345`.
 - Em `prod`, defina `APP_BOOTSTRAP_ADMIN_EMAIL` e `APP_BOOTSTRAP_ADMIN_PASSWORD` para criar o primeiro `ADMIN` em banco vazio; sem as variáveis nada é criado (no `docker compose` elas já vêm definidas).
 - O perfil `demo` usa a mesma postura de `prod`, cria usuários fictícios e recusa escrita em `/api/v1/**` com `403 READ_ONLY_DEMO`; veja [docs/demo.md](docs/demo.md).
-- `JWT_SECRET` (mínimo 32 caracteres, HS256) é obrigatória em `prod`; sem ela a aplicação não sobe.
+- `JWT_SECRET`
+- `APP_SINGLE_SESSION` controla se um novo login rotaciona o `tokenVersion` e derruba refresh tokens anteriores (padrao `true`; na demo use `false`). (mínimo 32 caracteres, HS256) é obrigatória em `prod`; sem ela a aplicação não sobe.
 - Validades em `app.security.jwt.ttl-seconds` (access) e `refresh-ttl-seconds` (refresh).
 - `/auth/login` bloqueia após 5 tentativas erradas por e-mail + IP em 15 minutos (429 `TOO_MANY_ATTEMPTS`), em memória e por instância.
 - CORS é desligado por padrão; libere origens com `CORS_ALLOWED_ORIGINS` (separadas por vírgula).
@@ -178,7 +179,7 @@ curl -X POST http://localhost:8080/api/v1/users \
   -d '{"name":"Maria Silva","email":"maria.silva@email.com","role":"USER","password":"senha12345"}'
 ```
 
-Erros retornam `application/problem+json` com `code`: `VALIDATION_ERROR`, `INVALID_REQUEST`, `RESOURCE_NOT_FOUND`, `EMAIL_ALREADY_EXISTS`, `INVALID_CREDENTIALS`, `ACCESS_DENIED`, `INVALID_REFRESH_TOKEN`, `INVALID_PASSWORD`, `INVALID_OR_EXPIRED_TOKEN`, `TOO_MANY_ATTEMPTS`, `PASSWORD_RESET_UNAVAILABLE`, `READ_ONLY_DEMO`, `INTERNAL_ERROR`.
+Erros retornam `application/problem+json` com `code`: `VALIDATION_ERROR`, `INVALID_REQUEST`, `RESOURCE_NOT_FOUND`, `EMAIL_ALREADY_EXISTS`, `INVALID_CREDENTIALS`, `ACCESS_DENIED`, `UNAUTHORIZED`, `CONFLICT`, `INVALID_REFRESH_TOKEN`, `INVALID_PASSWORD`, `INVALID_OR_EXPIRED_TOKEN`, `TOO_MANY_ATTEMPTS`, `PASSWORD_RESET_UNAVAILABLE`, `READ_ONLY_DEMO`, `INTERNAL_ERROR`.
 
 ## Testes
 

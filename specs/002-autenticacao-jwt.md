@@ -53,7 +53,7 @@ Fornecer login com e-mail/senha, emissão de access token (1 h) e refresh token 
 
 ### Refresh
 1. Decodifica e valida o refresh token (tipo, issuer, expiração).
-2. Busca usuário por e-mail (subject); deve existir e estar ativo.
+2. Busca usuário por id (subject); deve existir e estar ativo.
 3. Compara `ver` com `tokenVersion`; se diferente, 401.
 4. Incrementa `tokenVersion` atomicamente (rotativo).
 5. Emite novo par.

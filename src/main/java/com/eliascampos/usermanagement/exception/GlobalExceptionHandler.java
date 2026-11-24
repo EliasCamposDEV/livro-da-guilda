@@ -22,6 +22,7 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
@@ -88,6 +89,25 @@ public class GlobalExceptionHandler extends org.springframework.web.servlet.mvc.
         ProblemDetail problem = problem(HttpStatus.BAD_REQUEST, "Requisicao invalida",
                 "Corpo ou parametro da requisicao invalido", request);
         problem.setProperty("code", "INVALID_REQUEST");
+        return ResponseEntity.badRequest().body(problem);
+    }
+
+    @Override
+    protected ResponseEntity<Object> handleHandlerMethodValidationException(HandlerMethodValidationException ex,
+                                                                          HttpHeaders headers, HttpStatusCode status,
+                                                                          WebRequest request) {
+        Map<String, String> errors = new LinkedHashMap<>();
+        for (var result : ex.getParameterValidationResults()) {
+            for (var error : result.getResolvableErrors()) {
+                errors.putIfAbsent(result.getMethodParameter().getParameterName(),
+                        error.getDefaultMessage());
+            }
+        }
+        HttpServletRequest servletRequest = ((org.springframework.web.context.request.ServletWebRequest) request).getRequest();
+        ProblemDetail problem = problem(HttpStatus.BAD_REQUEST, "Dados invalidos",
+                "Um ou mais campos estao invalidos", servletRequest);
+        problem.setProperty("code", "VALIDATION_ERROR");
+        problem.setProperty("errors", errors);
         return ResponseEntity.badRequest().body(problem);
     }
 

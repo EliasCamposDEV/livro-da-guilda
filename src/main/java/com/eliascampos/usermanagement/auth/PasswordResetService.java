@@ -123,6 +123,7 @@ public class PasswordResetService {
                 .set("passwordHash", newPasswordHash)
                 .set("updatedAt", now)
                 .inc("tokenVersion", 1)
+                .inc("version", 1)
                 .unset("passwordResetTokenHash")
                 .unset("passwordResetExpiresAt");
         UpdateResult result = mongoTemplate.updateFirst(query, update, User.class);

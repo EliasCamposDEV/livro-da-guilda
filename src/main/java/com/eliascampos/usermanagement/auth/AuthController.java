@@ -18,6 +18,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -43,17 +44,19 @@ public class AuthController {
     private final UserService userService;
     private final LoginRateLimiter loginRateLimiter;
     private final PasswordResetService passwordResetService;
+    private final RefreshRateLimiter refreshRateLimiter;
     private final boolean singleSession;
 
     public AuthController(AuthenticationManager authenticationManager, JwtService jwtService,
                           UserService userService, LoginRateLimiter loginRateLimiter,
-                          PasswordResetService passwordResetService,
+                          PasswordResetService passwordResetService, RefreshRateLimiter refreshRateLimiter,
                           @Value("${app.security.single-session:true}") boolean singleSession) {
         this.authenticationManager = authenticationManager;
         this.jwtService = jwtService;
         this.userService = userService;
         this.loginRateLimiter = loginRateLimiter;
         this.passwordResetService = passwordResetService;
+        this.refreshRateLimiter = refreshRateLimiter;
         this.singleSession = singleSession;
     }
 
@@ -112,7 +115,7 @@ public class AuthController {
     @PostMapping("/logout")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void logout(Authentication authentication) {
-        userService.logout(authentication.getName());
+        userService.logout(authentication.getName(), singleSession);
     }
 
     @Operation(summary = "Troca o refresh token por um novo access token",
@@ -127,8 +130,17 @@ public class AuthController {
                             schema = @Schema(implementation = ApiError.class)))
     })
     @PostMapping("/refresh")
-    public TokenResponse refresh(@Valid @RequestBody RefreshRequest request) {
-        return jwtService.refresh(request.refreshToken());
+    public TokenResponse refresh(@Valid @RequestBody RefreshRequest request, HttpServletRequest servletRequest) {
+        String key = "refresh:" + (servletRequest.getRemoteAddr() == null ? "unknown" : servletRequest.getRemoteAddr());
+        refreshRateLimiter.check(key);
+        try {
+            TokenResponse response = jwtService.refresh(request.refreshToken());
+            refreshRateLimiter.record(key);
+            return response;
+        } catch (RuntimeException ex) {
+            refreshRateLimiter.record(key);
+            throw ex;
+        }
     }
 
     @Operation(summary = "Solicita a redefinicao de senha",

@@ -15,6 +15,13 @@ spring:
 server:
   forward-headers-strategy: native
 
+# Swagger desabilitado em producao.
+springdoc:
+  swagger-ui:
+    enabled: false
+  api-docs:
+    enabled: false
+
 # Nao expor detalhes de infraestrutura no health check publico.
 management:
   endpoint:

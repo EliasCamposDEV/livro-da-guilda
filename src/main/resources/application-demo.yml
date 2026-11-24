@@ -13,7 +13,7 @@ spring:
 
 # Atras do proxy do Render: respeita X-Forwarded-For/Proto (IP real no rate limit do login).
 server:
-  forward-headers-strategy: framework
+  forward-headers-strategy: native
 
 # Nao expor detalhes de infraestrutura no health check publico.
 management:

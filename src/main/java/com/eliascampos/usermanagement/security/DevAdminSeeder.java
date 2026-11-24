@@ -30,8 +30,8 @@ public class DevAdminSeeder implements ApplicationRunner {
     private final String password;
 
     public DevAdminSeeder(UserRepository userRepository, PasswordEncoder passwordEncoder,
-                          @org.springframework.beans.factory.annotation.Value("${app.dev.admin.email:}") String email,
-                          @org.springframework.beans.factory.annotation.Value("${app.dev.admin.password:}") String password) {
+                          @org.springframework.beans.factory.annotation.Value("${app.bootstrap.admin.email:}") String email,
+                          @org.springframework.beans.factory.annotation.Value("${app.bootstrap.admin.password:}") String password) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.email = email == null ? "" : email.trim();

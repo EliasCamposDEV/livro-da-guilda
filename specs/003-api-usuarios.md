@@ -133,4 +133,4 @@ Expor `/api/v1/users` (CRUD, paginação, busca, filtros) e `/api/v1/me/password
 ## Decisões
 - Exclusão física + auditoria: histórico preservado na auditoria.
 - Papel apenas USER/ADMIN: simplicidade para o escopo.
-- E-mail como subject do JWT: mudança de e-mail invalida refresh indiretamente.
+- Id como subject do JWT: mudança de e-mail invalida refresh indiretamente.

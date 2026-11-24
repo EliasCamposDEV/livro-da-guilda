@@ -118,7 +118,7 @@ public class UserService {
         return PageResponse.from(page);
     }
 
-    public UserResponse update(String id, UserUpdateRequest request) {
+    public synchronized UserResponse update(String id, UserUpdateRequest request) {
         User user = findEntityById(id);
         String email = normalizeEmail(request.email());
 
@@ -158,7 +158,7 @@ public class UserService {
         }
     }
 
-    public UserResponse changeStatus(String id, UserStatusRequest request) {
+    public synchronized UserResponse changeStatus(String id, UserStatusRequest request) {
         User user = findEntityById(id);
 
         // Evita auto-desativacao e lockout do ultimo ADMIN.
@@ -184,11 +184,11 @@ public class UserService {
         return UserResponse.from(saved);
     }
 
-    public void delete(String id) {
+    public synchronized void delete(String id) {
         User user = findEntityById(id);
 
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth != null && auth.getName() != null && auth.getName().equalsIgnoreCase(user.getEmail())) {
+        if (auth != null && auth.getName() != null && auth.getName().equals(user.getId())) {
             throw new com.eliascampos.usermanagement.exception.BusinessRuleException("Nao e possivel excluir o proprio usuario");
         }
         if (user.getRole() == UserRole.ADMIN && user.isActive() && countActiveAdmins() <= 1) {
@@ -225,8 +225,11 @@ public class UserService {
         ));
     }
 
-    public void logout(String userId) {
+    public void logout(String userId, boolean rotateVersion) {
         userRepository.findById(userId).ifPresent(user -> {
+            if (!rotateVersion) {
+                return;
+            }
             user.rotateTokenVersion();
             User saved = userRepository.save(user);
             auditService.record(AuditAction.USER_LOGGED_OUT, saved, Map.of(

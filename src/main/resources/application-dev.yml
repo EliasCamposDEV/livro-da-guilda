@@ -8,6 +8,10 @@ de:
 
 # Em dev o token de redefinicao aparece no log (marcador PASSWORD_RESET_TOKEN).
 app:
+  bootstrap:
+    admin:
+      email: ${APP_BOOTSTRAP_ADMIN_EMAIL:admin@email.com}
+      password: ${APP_BOOTSTRAP_ADMIN_PASSWORD:admin12345}
   security:
     jwt:
       secret: ${JWT_SECRET:dev-only-secret-change-me-0123456789abcdef}

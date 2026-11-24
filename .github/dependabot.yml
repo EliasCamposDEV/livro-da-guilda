@@ -6,7 +6,7 @@ updates:
       interval: weekly
     open-pull-requests-limit: 5
     ignore:
-      # A migração para o Spring Boot 4 é planejada: o bump de major não compila
+      # A migração para o Spring Boot 4 é concluida: o bump de major não compila
       # neste código e só vira PR vermelho. O Dependabot segue aberto para patch/minor.
       - dependency-name: "org.springframework.boot:*"
         update-types: ["version-update:semver-major"]
