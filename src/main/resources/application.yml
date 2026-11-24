@@ -32,6 +32,13 @@ springdoc:
     path: /v3/api-docs
 
 management:
+  health:
+    mongodb:
+      # O health padrao do Boot 4 roda `hello` em TODOS os bancos, inclusive
+      # `local`. O usuario do Atlas tem privilegio minimo e nao pode ler `local`,
+      # o que derrubava o health check do Render. O indicador da aplicacao
+      # (ApplicationDatabaseHealthIndicator) faz ping apenas no banco usado pela API.
+      enabled: false
   endpoints:
     web:
       exposure:

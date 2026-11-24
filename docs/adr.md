@@ -21,3 +21,8 @@
 - Decisao: `mvn verify` falha em qualquer achado Medium; excecoes ficam em `config/spotbugs-exclude.xml`.
 - Motivo: copiar singletons injetados pelo Spring quebraria o container, e copiar o `User` do `AppUserDetails` perderia identidade e versao do documento. A validacao fail-fast do `JwtService` e intencional e a classe nao tem finalizer.
 - Consequencia: DTOs com mapas e listas usam copias defensivas de verdade; apenas esses casos de framework sao suprimidos, com justificativa no arquivo de filtro.
+
+## ADR-6: health check do Mongo no banco da aplicacao
+- Decisao: desligar o health indicator padrao do Boot 4 (`management.health.mongodb.enabled=false`) e usar `ApplicationDatabaseHealthIndicator`, que roda `ping` somente no banco configurado para a API.
+- Motivo: o indicador do Boot 4 lista todos os bancos e executa `hello` em cada um, inclusive `local`. O usuario do Atlas segue o principio do menor privilegio e nao tem acesso a `local`, entao o `/actuator/health` retornava erro e o Render abortava o deploy.
+- Consequencia: o health reflete a disponibilidade do banco usado pela aplicacao sem exigir permissao de cluster; uma queda do Mongo continua derrubando o health.

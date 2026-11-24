@@ -8,13 +8,14 @@
     objetos quebraria o container. O wrapper de resposta do Swagger deve devolver
     o proprio ServletOutputStream/PrintWriter ao container. AppUserDetails guarda
     o documento User para auditoria/refresh; copiar perderia identidade e versao.
+    O health indicator guarda o MongoTemplate para fazer ping so no banco da aplicacao.
 
     CT_CONSTRUCTOR_THROW: JwtService valida o segredo no construtor (fail-fast).
     A classe nao define finalizer, entao nao ha risco de finalizer attack.
   -->
   <Match>
     <Bug code="EI,EI2"/>
-    <Class name="~com\.eliascampos\.usermanagement\.(audit\.AuditService|auth\.AuthController|auth\.PasswordResetService|config\.SwaggerUiCssFilter\$BufferingResponseWrapper|security\.AppUserDetails|security\.DemoReadOnlyFilter|security\.JwtService|user\.MeController|user\.UserController|user\.UserService|user\.UserVersionMigration)"/>
+    <Class name="~com\.eliascampos\.usermanagement\.(audit\.AuditService|auth\.AuthController|auth\.PasswordResetService|config\.ApplicationDatabaseHealthIndicator|config\.SwaggerUiCssFilter\$BufferingResponseWrapper|security\.AppUserDetails|security\.DemoReadOnlyFilter|security\.JwtService|user\.MeController|user\.UserController|user\.UserService|user\.UserVersionMigration)"/>
   </Match>
   <Match>
     <Bug pattern="CT_CONSTRUCTOR_THROW"/>

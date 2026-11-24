@@ -97,6 +97,7 @@ os 7 usuários. Os dados também somem se você apagar o cluster.
 | App sobe e cai com erro de `MONGODB_URI` | Variável ausente ou string sem o nome do banco. |
 | `401` no login da demo | Senha diferente da definida em `DEMO_ADMIN_PASSWORD` (o seeder só roda em banco vazio). |
 | `503`/timeout no primeiro acesso | Free tier hiberna após ~15 min ociosos; o primeiro request leva 30–60 s. |
+| Health check timeout com `Unauthorized ... $db: "local"` | Versao antiga do servico. O Boot 4 trocou o health do Mongo; use `main` com `ApplicationDatabaseHealthIndicator` (ADR-6). |
 | `403 READ_ONLY_DEMO` em tudo | Esperado para escrita; leitura e login continuam funcionando. |
 | `ReadOnlyDemo` mas quero testar escrita | Rode local com o perfil `dev` (Mongo embutido), a demo pública é só leitura por decisão de segurança. |
 
