@@ -1,9 +1,10 @@
 spring:
   application:
     name: livro-da-guilda
+  mongodb:
+    uri: ${MONGODB_URI:mongodb://localhost:27018/usuarios}
   data:
     mongodb:
-      uri: ${MONGODB_URI}
       auto-index-creation: true
   jackson:
     default-property-inclusion: non_null
