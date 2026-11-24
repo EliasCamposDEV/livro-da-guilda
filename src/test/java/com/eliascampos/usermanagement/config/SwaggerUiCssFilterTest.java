@@ -29,6 +29,7 @@ class SwaggerUiCssFilterTest {
         assertTrue(body.contains("swagger-ui__skip-link"), body);
         assertTrue(body.contains("dark-mode-toggle button"), body);
         assertTrue(body.contains("topbar a.link:not([href])"), body);
+        assertTrue(body.contains("Pagina inicial da API"), body);
         assertTrue(body.contains("setAttribute('role', 'main')"), body);
         assertTrue(body.contains("</head>"), body);
         assertEquals("text/html;charset=UTF-8", response.getContentType());

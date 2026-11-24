@@ -45,9 +45,14 @@ public class SwaggerUiCssFilter extends OncePerRequestFilter {
                     themes[i].setAttribute('aria-label', 'Alternar tema');
                   }
                 }
-                var logo = document.querySelector('.topbar a.link:not([href])');
+                var logo = document.querySelector('.topbar a.link');
                 if (logo) {
-                  logo.setAttribute('href', '/');
+                  if (!logo.getAttribute('href')) {
+                    logo.setAttribute('href', '/');
+                  }
+                  if (!logo.hasAttribute('aria-label')) {
+                    logo.setAttribute('aria-label', 'Pagina inicial da API');
+                  }
                 }
                 var main = document.querySelector('.swagger-ui');
                 if (main) {
