@@ -22,7 +22,9 @@ Tempo estimado: 20 a 30 minutos. Custo: R$ 0.
 2. **Database Access** → *Add New Database User*:
    - usuário: `livro-da-guilda`
    - senha: gere uma forte e guarde (ela vai na URL)
-   - privilégio: *Read and write to any database*
+   - privilégio: *Specific privileges* -> `readWrite` apenas no banco `livro-da-guilda`.
+     Isso cobre `usuarios`, `auditoria` e `schema_migrations`. Nao use `root` nem
+     `readWriteAnyDatabase`.
 3. **Network Access** → *Add IP Address* → `0.0.0.0/0`.
    O Render free não tem IP fixo de saída; liberar tudo é o caminho simples. A proteção
    real fica no usuário/senha do banco e no fato de a API ser somente leitura.
