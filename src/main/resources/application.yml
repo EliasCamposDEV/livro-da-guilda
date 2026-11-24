@@ -34,6 +34,10 @@ springdoc:
 
 management:
   health:
+    # O starter do Redis cria um connection factory padrao para localhost:6379.
+    # Sem Redis configurado, esse health ficaria DOWN e derrubaria o deploy.
+    redis:
+      enabled: ${APP_RATE_LIMIT_REDIS_ENABLED:false}
     mongodb:
       # O health padrao do Boot 4 roda `hello` em TODOS os bancos, inclusive
       # `local`. O usuario do Atlas tem privilegio minimo e nao pode ler `local`,

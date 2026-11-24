@@ -36,6 +36,15 @@ class ApplicationYamlTest {
     }
 
     @Test
+    void shouldDisableRedisHealthByDefault() throws IOException {
+        PropertySource<?> source = new YamlPropertySourceLoader()
+                .load("application", new ClassPathResource("application.yml")).get(0);
+
+        assertEquals("${APP_RATE_LIMIT_REDIS_ENABLED:false}",
+                source.getProperty("management.health.redis.enabled"));
+    }
+
+    @Test
     void shouldKeepDemoReadOnlySettingAfterMergingKeys() throws IOException {
         List<PropertySource<?>> sources = new YamlPropertySourceLoader()
                 .load("application-demo", new ClassPathResource("application-demo.yml"));
