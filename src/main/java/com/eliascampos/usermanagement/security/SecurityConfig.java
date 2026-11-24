@@ -136,22 +136,20 @@ public class SecurityConfig {
     }
 
     private org.springframework.core.convert.converter.Converter<org.springframework.security.oauth2.jwt.Jwt, org.springframework.security.authentication.AbstractAuthenticationToken> jwtAuthenticationConverter(com.eliascampos.usermanagement.user.UserRepository userRepository) {
-        JwtGrantedAuthoritiesConverter authorities = new JwtGrantedAuthoritiesConverter();
-        authorities.setAuthoritiesClaimName(ROLES_CLAIM);
-        authorities.setAuthorityPrefix("ROLE_");
-        JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
-        converter.setJwtGrantedAuthoritiesConverter(authorities);
-
         return jwt -> {
-            org.springframework.security.authentication.AbstractAuthenticationToken authentication =
-                    converter.convert(jwt);
             String userId = jwt.getSubject();
             com.eliascampos.usermanagement.user.User user = userRepository.findById(userId)
                     .orElseThrow(() -> new org.springframework.security.authentication.BadCredentialsException("Token invalido"));
             if (!user.isActive()) {
                 throw new org.springframework.security.authentication.DisabledException("Usuario inativo");
             }
-            return authentication;
+
+            java.util.List<org.springframework.security.core.GrantedAuthority> authorities =
+                    java.util.List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority(
+                            "ROLE_" + user.getRole().name()));
+
+            return new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
+                    userId, null, authorities);
         };
     }
 

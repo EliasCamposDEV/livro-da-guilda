@@ -1,6 +1,7 @@
 package com.eliascampos.usermanagement.audit;
 
 import com.eliascampos.usermanagement.user.User;
+import com.eliascampos.usermanagement.user.UserRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -28,10 +29,13 @@ public class AuditService {
 
     private final AuditEventRepository auditEventRepository;
     private final MongoTemplate mongoTemplate;
+    private final UserRepository userRepository;
 
-    public AuditService(AuditEventRepository auditEventRepository, MongoTemplate mongoTemplate) {
+    public AuditService(AuditEventRepository auditEventRepository, MongoTemplate mongoTemplate,
+                        UserRepository userRepository) {
         this.auditEventRepository = auditEventRepository;
         this.mongoTemplate = mongoTemplate;
+        this.userRepository = userRepository;
     }
 
     public void record(AuditAction action, User target, Map<String, Object> details) {
@@ -41,12 +45,25 @@ public class AuditService {
     public void record(AuditAction action, String targetUserId, String targetUserEmail,
                        Map<String, Object> details) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String actorEmail = (authentication != null && authentication.isAuthenticated())
-                ? authentication.getName()
-                : "system";
-        String actorRole = (authentication != null && authentication.getAuthorities() != null)
-                ? authentication.getAuthorities().toString()
-                : "SYSTEM";
+        String actorEmail;
+        String actorRole;
+        if (authentication == null || !authentication.isAuthenticated()
+                || "anonymousUser".equals(authentication.getName())) {
+            actorEmail = "system";
+            actorRole = "SYSTEM";
+        } else {
+            String principalName = authentication.getName();
+            User user = userRepository.findById(principalName).orElse(null);
+            if (user != null) {
+                actorEmail = user.getEmail();
+                actorRole = user.getRole().name();
+            } else {
+                actorEmail = principalName;
+                actorRole = authentication.getAuthorities() != null
+                        ? authentication.getAuthorities().toString()
+                        : "UNKNOWN";
+            }
+        }
 
         save(action, actorEmail, actorRole, targetUserId, targetUserEmail, details);
     }

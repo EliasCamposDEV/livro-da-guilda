@@ -29,6 +29,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.util.Locale;
 
@@ -42,15 +43,18 @@ public class AuthController {
     private final UserService userService;
     private final LoginRateLimiter loginRateLimiter;
     private final PasswordResetService passwordResetService;
+    private final boolean singleSession;
 
     public AuthController(AuthenticationManager authenticationManager, JwtService jwtService,
                           UserService userService, LoginRateLimiter loginRateLimiter,
-                          PasswordResetService passwordResetService) {
+                          PasswordResetService passwordResetService,
+                          @Value("${app.security.single-session:true}") boolean singleSession) {
         this.authenticationManager = authenticationManager;
         this.jwtService = jwtService;
         this.userService = userService;
         this.loginRateLimiter = loginRateLimiter;
         this.passwordResetService = passwordResetService;
+        this.singleSession = singleSession;
     }
 
     @Operation(summary = "Autentica com e-mail e senha",
@@ -87,8 +91,11 @@ public class AuthController {
             loginRateLimiter.reset(key);
 
             AppUserDetails principal = (AppUserDetails) authentication.getPrincipal();
-            // Um novo login derruba refresh tokens emitidos anteriormente.
-            userService.onSuccessfulLogin(principal.getUser());
+            // Um novo login derruba refresh tokens emitidos anteriormente, exceto na demo
+            // compartilhada, onde isso invalidaria a sessao dos demais visitantes.
+            if (singleSession) {
+                userService.onSuccessfulLogin(principal.getUser());
+            }
             return jwtService.issue(principal.getUser());
         }
     }

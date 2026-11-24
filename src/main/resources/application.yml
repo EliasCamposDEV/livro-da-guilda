@@ -65,3 +65,4 @@ app:
       # log apenas em dev/test; none responde 503 e evita gerar token sem entrega.
       delivery: ${PASSWORD_RESET_DELIVERY:none}
       token-ttl: ${PASSWORD_RESET_TOKEN_TTL:PT15M}
+    single-session: ${APP_SINGLE_SESSION:true}

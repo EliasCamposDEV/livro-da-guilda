@@ -68,9 +68,16 @@ public class PasswordResetRateLimiter {
         }
 
         attempts.entrySet().removeIf(entry -> entry.getValue().expired(now));
-        if (attempts.size() >= MAX_TRACKED_KEYS) {
-            attempts.clear();
+        if (attempts.size() < MAX_TRACKED_KEYS) {
+            return;
         }
+
+        java.util.List<String> oldest = attempts.entrySet().stream()
+                .sorted(java.util.Comparator.comparing(entry -> entry.getValue().start()))
+                .limit(Math.max(1, attempts.size() / 5))
+                .map(java.util.Map.Entry::getKey)
+                .toList();
+        oldest.forEach(attempts::remove);
     }
 
     private String emailKey(String email, String ipAddress) {

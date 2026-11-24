@@ -94,7 +94,7 @@ public class JwtService {
         Query query = Query.query(Criteria.where("_id").is(userId)
                 .and("active").is(true)
                 .and("tokenVersion").is(expected));
-        Update update = new Update().inc("tokenVersion", 1);
+        Update update = new Update().inc("tokenVersion", 1).inc("version", 1);
         UpdateResult result = mongoTemplate.updateFirst(query, update, User.class);
         if (result.getModifiedCount() == 0) {
             throw new InvalidRefreshTokenException();

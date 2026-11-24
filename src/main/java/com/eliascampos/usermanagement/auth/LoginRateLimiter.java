@@ -63,10 +63,21 @@ public class LoginRateLimiter {
             return current == null || current.expired();
         });
 
-        if (attempts.size() >= MAX_TRACKED_KEYS) {
-            attempts.clear();
-            locks.clear();
+        if (attempts.size() < MAX_TRACKED_KEYS) {
+            return;
         }
+
+        // Eviccao LRU aproximada por idade: remove as entradas mais antigas em
+        // vez de zerar todos os contadores, preservando o bloqueio dos demais.
+        java.util.List<String> oldest = attempts.entrySet().stream()
+                .sorted(java.util.Comparator.comparing(entry -> entry.getValue().start()))
+                .limit(Math.max(1, attempts.size() / 5))
+                .map(java.util.Map.Entry::getKey)
+                .toList();
+        oldest.forEach(key -> {
+            attempts.remove(key);
+            locks.remove(key);
+        });
     }
 
     private record Attempts(Instant start, int count) {

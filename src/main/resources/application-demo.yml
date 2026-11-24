@@ -29,6 +29,7 @@ app:
     password-reset:
       # A demo e somente leitura: os endpoints de reset sao bloqueados antes daqui.
       delivery: none
+    single-session: false
   demo:
     # Recusa POST/PUT/PATCH/DELETE em /api/v1 com 403 READ_ONLY_DEMO.
     # Login, refresh, logout, Swagger e leitura continuam disponiveis.

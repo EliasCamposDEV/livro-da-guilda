@@ -9,6 +9,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DuplicateKeyException;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatusCode;
@@ -187,6 +188,15 @@ public class GlobalExceptionHandler extends org.springframework.web.servlet.mvc.
             headers.setAllow(supported);
         }
         return new ResponseEntity<>(problem, headers, HttpStatus.METHOD_NOT_ALLOWED);
+    }
+
+    @ExceptionHandler(OptimisticLockingFailureException.class)
+    public ResponseEntity<ProblemDetail> handleOptimisticLock(OptimisticLockingFailureException ex,
+                                                             HttpServletRequest request) {
+        ProblemDetail problem = problem(HttpStatus.CONFLICT, "Conflito de concorrencia",
+                "O recurso foi alterado por outra requisicao. Tente novamente.", request);
+        problem.setProperty("code", "CONFLICT");
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(problem);
     }
 
     @ExceptionHandler(Exception.class)
