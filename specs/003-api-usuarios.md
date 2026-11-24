@@ -35,7 +35,7 @@ Expor `/api/v1/users` (CRUD, paginação, busca, filtros) e `/api/v1/me/password
 - RNF3: Respostas de erro em `application/problem+json` com `code`.
 - RNF4: Paginação padrão: size 10, sort `createdAt` desc; máx. 50 por página.
 - RNF5: Busca usa `Pattern.quote` (sem injeção de regex).
-- RNF6: Índice único de e-mail criado na subida (`auto-index-creation`).
+- RNF6: Índice único de e-mail criado na subida pela migração versionada `IndexMigration` (`auto-index-creation` desligado).
 - RNF7: `UserResponse` não expõe senha nem campos de reset.
 - RNF8: Auditoria registra criação, atualização, mudança de status, exclusão, troca de senha e logout.
 

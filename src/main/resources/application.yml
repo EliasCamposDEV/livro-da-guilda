@@ -5,7 +5,8 @@ spring:
     uri: ${MONGODB_URI:mongodb://localhost:27018/usuarios}
   data:
     mongodb:
-      auto-index-creation: true
+      # Indices sao criados pela migracao versionada (IndexMigration).
+      auto-index-creation: false
   jackson:
     default-property-inclusion: non_null
   data.web.pageable:

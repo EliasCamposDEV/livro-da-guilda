@@ -205,4 +205,4 @@ O `mvn verify` também roda o SpotBugs com limite `Medium` e falha em qualquer a
 ## Notas
 
 - E-mail é normalizado para minúsculas e protegido por índice único.
-- O índice único de e-mail é criado na subida (`auto-index-creation`). Para várias instâncias ou deploy sem downtime, mova a criação de índices para um passo de migração.
+- Os índices são criados na subida por `IndexMigration`, com a versão registrada em `schema_migrations`. O `auto-index-creation` está desligado.

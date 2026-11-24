@@ -9,7 +9,6 @@ spring:
     mongodb:
       # Sem valor padrao: a aplicacao falha ao subir se MONGODB_URI nao existir.
       uri: ${MONGODB_URI}
-      auto-index-creation: true
 
 # Atras do proxy do Render: respeita X-Forwarded-For/Proto (IP real no rate limit do login).
 server:

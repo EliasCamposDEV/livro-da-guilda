@@ -2,7 +2,6 @@ package com.eliascampos.usermanagement.user;
 
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.Version;
-import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.io.Serializable;
@@ -18,20 +17,16 @@ public class User implements Serializable {
 
     private String name;
 
-    @Indexed(unique = true)
     private String email;
 
     private String passwordHash;
 
-    @Indexed(unique = true, sparse = true)
     private String passwordResetTokenHash;
 
     private Instant passwordResetExpiresAt;
 
-    @Indexed
     private UserRole role;
 
-    @Indexed
     private boolean active;
 
     // Versao do refresh token em vigor: cada refresh emitido carrega este numero e a rotacao o incrementa.

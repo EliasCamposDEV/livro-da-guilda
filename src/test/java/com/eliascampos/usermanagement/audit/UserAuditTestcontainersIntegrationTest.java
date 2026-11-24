@@ -1,5 +1,6 @@
 package com.eliascampos.usermanagement.audit;
 
+import org.bson.Document;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -7,6 +8,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.index.IndexInfo;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -57,6 +62,9 @@ class UserAuditTestcontainersIntegrationTest {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private MongoTemplate mongoTemplate;
 
     private String adminToken;
 
@@ -140,6 +148,19 @@ class UserAuditTestcontainersIntegrationTest {
         var first = objectMapper.readTree(firstResult.getResponse().getContentAsString()).get("content");
         var second = objectMapper.readTree(secondResult.getResponse().getContentAsString()).get("content");
         assertThat(first.get(0).get("id").asText()).isNotEqualTo(second.get(0).get("id").asText());
+    }
+
+    @Test
+    void indexesComeFromVersionedMigration() {
+        assertThat(mongoTemplate.indexOps("usuarios").getIndexInfo())
+                .extracting(IndexInfo::getName)
+                .contains("email", "passwordResetTokenHash", "role", "active");
+        assertThat(mongoTemplate.indexOps("auditoria").getIndexInfo())
+                .extracting(IndexInfo::getName)
+                .contains("audit_timestamp_id", "actorEmail", "action", "targetUserId");
+        assertThat(mongoTemplate.findOne(
+                new Query(Criteria.where("_id").is("001-indices")), Document.class, "schema_migrations"))
+                .isNotNull();
     }
 
     @Test

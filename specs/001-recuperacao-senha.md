@@ -41,7 +41,7 @@ Permitir que o usuario solicite a redefinicao de senha e defina uma nova senha c
 - RNF8: O endpoint de reset nao precisa de rate limit proprio: o token tem 256 bits e o BCrypt so e pago depois de o token ser validado. Erros de validacao do corpo sao rejeitados antes do consumo.
 - RNF9: Swagger documenta os dois endpoints, os corpos, os status 204, 400, 403, 429 e 503, com exemplos reais. Nenhum schema de resposta inclui token. A descricao da demo deve incluir as rotas de recuperacao, e o exemplo de 429 nao pode falar em login.
 - RNF10: Testes de integracao rodam com MongoDB embarcado (dev/test) e Testcontainers (2 testes de integracao) e `mvn verify` no CI.
-- RNF11: Compatibilidade: os novos campos sao opcionais, nao alteram `UserResponse` e o indice e criado no start com `auto-index-creation: true`.
+- RNF11: Compatibilidade: os novos campos sao opcionais, nao alteram `UserResponse` e o indice e criado no start pela migração versionada `IndexMigration`.
 
 ## Endpoints
 | Metodo | Rota | Descricao | Auth | Sucesso |

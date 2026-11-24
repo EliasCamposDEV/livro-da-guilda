@@ -1,16 +1,12 @@
 package com.eliascampos.usermanagement.audit;
 
 import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.index.CompoundIndex;
-import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.Instant;
 import java.util.Map;
 
 @Document(collection = "auditoria")
-// O cursor ordena por timestamp e _id; o indice composto evita sort em memoria.
-@CompoundIndex(name = "audit_timestamp_id", def = "{'timestamp': -1, '_id': -1}")
 public class AuditEvent {
 
     @Id
@@ -18,15 +14,12 @@ public class AuditEvent {
 
     private Instant timestamp;
 
-    @Indexed
     private String actorEmail;
 
     private String actorRole;
 
-    @Indexed
     private AuditAction action;
 
-    @Indexed
     private String targetUserId;
 
     private String targetUserEmail;
