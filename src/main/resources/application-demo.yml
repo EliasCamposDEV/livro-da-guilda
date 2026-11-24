@@ -23,6 +23,10 @@ management:
 
 app:
   demo:
+    # Recusa POST/PUT/PATCH/DELETE em /api/v1 com 403 READ_ONLY_DEMO.
+    # Login, refresh, logout, Swagger e leitura continuam disponiveis.
+    read-only: true
+    # Credenciais publicas de proposito: a demo nao permite escrita.
     admin:
       email: ${DEMO_ADMIN_EMAIL:demo@eliascampos.dev}
       password: ${DEMO_ADMIN_PASSWORD:demo-readonly-2026}
@@ -34,11 +38,3 @@ app:
       # A demo e somente leitura: os endpoints de reset sao bloqueados antes daqui.
       delivery: none
     single-session: false
-  demo:
-    # Recusa POST/PUT/PATCH/DELETE em /api/v1 com 403 READ_ONLY_DEMO.
-    # Login, refresh, logout, Swagger e leitura continuam disponiveis.
-    read-only: true
-    # Credenciais publicas de proposito: a demo nao permite escrita.
-    admin:
-      email: ${DEMO_ADMIN_EMAIL:demo@eliascampos.dev}
-      password: ${DEMO_ADMIN_PASSWORD:demo-readonly-2026}
