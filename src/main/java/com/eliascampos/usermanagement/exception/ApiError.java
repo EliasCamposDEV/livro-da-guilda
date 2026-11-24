@@ -38,4 +38,12 @@ public record ApiError(
         @Schema(description = "Erros por campo; presente apenas em falhas de validação")
         Map<String, String> errors
 ) {
+    public ApiError {
+        errors = errors == null ? null : java.util.Map.copyOf(errors);
+    }
+
+    @Override
+    public Map<String, String> errors() {
+        return errors == null ? null : java.util.Map.copyOf(errors);
+    }
 }

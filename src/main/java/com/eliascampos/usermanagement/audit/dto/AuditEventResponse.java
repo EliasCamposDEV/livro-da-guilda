@@ -38,6 +38,15 @@ public record AuditEventResponse(
         String ipAddress
 
 ) {
+    public AuditEventResponse {
+        details = details == null ? null : new java.util.HashMap<>(details);
+    }
+
+    @Override
+    public Map<String, Object> details() {
+        return details == null ? null : new java.util.HashMap<>(details);
+    }
+
     public static AuditEventResponse from(AuditEvent event) {
         return new AuditEventResponse(
                 event.getId(),

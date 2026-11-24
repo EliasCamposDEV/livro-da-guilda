@@ -20,10 +20,10 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
@@ -108,9 +108,17 @@ public class AuthController {
                         Map.of("reason", ex.getClass().getSimpleName()));
                 throw ex;
             }
+            Object principalObj = authentication.getPrincipal();
+            if (!(principalObj instanceof AppUserDetails principal)) {
+                loginRateLimiter.recordFailure(key);
+                loginRateLimiter.recordFailureIp(ip);
+                auditService.recordForActor(AuditAction.LOGIN_FAILED, "system", null,
+                        request.email().trim().toLowerCase(Locale.ROOT),
+                        Map.of("reason", "PRINCIPAL_INVALID"));
+                throw new BadCredentialsException("Principal invalido");
+            }
             loginRateLimiter.reset(key);
 
-            AppUserDetails principal = (AppUserDetails) authentication.getPrincipal();
             // Um novo login derruba refresh tokens emitidos anteriormente, exceto na demo
             // compartilhada, onde isso invalidaria a sessao dos demais visitantes.
             if (singleSession) {

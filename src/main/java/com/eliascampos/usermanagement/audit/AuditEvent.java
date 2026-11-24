@@ -46,7 +46,7 @@ public class AuditEvent {
         this.action = action;
         this.targetUserId = targetUserId;
         this.targetUserEmail = targetUserEmail;
-        this.details = details;
+        this.details = details == null ? null : new java.util.HashMap<>(details);
         this.ipAddress = ipAddress;
     }
 
@@ -79,7 +79,7 @@ public class AuditEvent {
     }
 
     public Map<String, Object> getDetails() {
-        return details;
+        return details == null ? null : new java.util.HashMap<>(details);
     }
 
     public String getIpAddress() {

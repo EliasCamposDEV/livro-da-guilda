@@ -109,7 +109,8 @@
                 <version>4.10.5.0</version>
                 <configuration>
                     <effort>Max</effort>
-                    <threshold>High</threshold>
+                    <threshold>Medium</threshold>
+                    <excludeFilterFile>${project.basedir}/config/spotbugs-exclude.xml</excludeFilterFile>
                 </configuration>
                 <executions>
                     <execution>

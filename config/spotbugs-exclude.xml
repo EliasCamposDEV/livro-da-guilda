@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FindBugsFilter>
+  <!--
+    Exclusoes documentadas de achados Medium do SpotBugs.
+
+    EI_EXPOSE_REP/EI_EXPOSE_REP2: o Spring injeta singletons compartilhados
+    (MongoTemplate, MeterRegistry, ObjectMapper, services, limiters). Copiar esses
+    objetos quebraria o container. O wrapper de resposta do Swagger deve devolver
+    o proprio ServletOutputStream/PrintWriter ao container. AppUserDetails guarda
+    o documento User para auditoria/refresh; copiar perderia identidade e versao.
+
+    CT_CONSTRUCTOR_THROW: JwtService valida o segredo no construtor (fail-fast).
+    A classe nao define finalizer, entao nao ha risco de finalizer attack.
+  -->
+  <Match>
+    <Bug code="EI,EI2"/>
+    <Class name="~com\.eliascampos\.usermanagement\.(audit\.AuditService|auth\.AuthController|auth\.PasswordResetService|config\.SwaggerUiCssFilter\$BufferingResponseWrapper|security\.AppUserDetails|security\.DemoReadOnlyFilter|security\.JwtService|user\.MeController|user\.UserController|user\.UserService|user\.UserVersionMigration)"/>
+  </Match>
+  <Match>
+    <Bug pattern="CT_CONSTRUCTOR_THROW"/>
+    <Class name="com.eliascampos.usermanagement.security.JwtService"/>
+  </Match>
+</FindBugsFilter>

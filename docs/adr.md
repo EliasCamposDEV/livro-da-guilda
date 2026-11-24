@@ -16,3 +16,8 @@
 ## ADR-4: TTL do access token
 - Decisao: access token com 1 hora, com validacao de usuario ativo/papel a cada requisicao (consulta ao banco).
 - Motivo: equilibrio entre UX e revogacao imediata; refresh rotativo de 7 dias.
+
+## ADR-5: SpotBugs Medium com excecoes explicitas
+- Decisao: `mvn verify` falha em qualquer achado Medium; excecoes ficam em `config/spotbugs-exclude.xml`.
+- Motivo: copiar singletons injetados pelo Spring quebraria o container, e copiar o `User` do `AppUserDetails` perderia identidade e versao do documento. A validacao fail-fast do `JwtService` e intencional e a classe nao tem finalizer.
+- Consequencia: DTOs com mapas e listas usam copias defensivas de verdade; apenas esses casos de framework sao suprimidos, com justificativa no arquivo de filtro.

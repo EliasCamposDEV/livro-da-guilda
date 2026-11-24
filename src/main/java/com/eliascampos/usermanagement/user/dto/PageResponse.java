@@ -24,6 +24,14 @@ public record PageResponse<T>(
         int totalPages
 
 ) {
+    public PageResponse {
+        content = content == null ? null : List.copyOf(content);
+    }
+
+    @Override
+    public List<T> content() {
+        return content == null ? null : List.copyOf(content);
+    }
 
     public static <T> PageResponse<T> from(Page<T> page) {
         return new PageResponse<>(

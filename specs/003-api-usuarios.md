@@ -11,7 +11,7 @@ Expor `/api/v1/users` (CRUD, paginação, busca, filtros) e `/api/v1/me/password
 ## Fora de escopo
 - Auto-cadastro público de usuários.
 - Upload de avatar, perfis estendidos.
-- Exclusão lógica (soft delete) — exclusão é física.
+- Exclusão lógica (soft delete) - exclusão é física.
 - Gestão de papéis além de USER/ADMIN.
 
 ## Requisitos funcionais
