@@ -4,12 +4,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Janela fixa de tentativas de login por chave (e-mail + IP) e por IP.
  * Os contadores ficam no RateLimitStore: locais por padrao, compartilhados no Redis.
+ * Locks usam stripes fixas: limitam a memoria e serializam logins da mesma conta.
  */
 @Component
 public class LoginRateLimiter {
@@ -17,13 +16,17 @@ public class LoginRateLimiter {
     static final int MAX_ATTEMPTS = 5;
     static final Duration WINDOW = Duration.ofMinutes(15);
     private static final int MAX_PER_IP = 30;
+    private static final int LOCK_STRIPES = 256;
 
     private final RateLimitStore store;
-    private final Map<String, Object> locks = new ConcurrentHashMap<>();
+    private final Object[] locks = new Object[LOCK_STRIPES];
 
     @Autowired
     public LoginRateLimiter(RateLimitStore store) {
         this.store = store;
+        for (int i = 0; i < locks.length; i++) {
+            locks[i] = new Object();
+        }
     }
 
     public void check(String key) {
@@ -34,12 +37,10 @@ public class LoginRateLimiter {
 
     public void recordFailure(String key) {
         store.increment("login:" + key, WINDOW);
-        locks.computeIfAbsent(key, ignored -> new Object());
     }
 
     public void reset(String key) {
         store.reset("login:" + key);
-        locks.remove(key);
     }
 
     public void checkIp(String ip) {
@@ -52,14 +53,13 @@ public class LoginRateLimiter {
         store.increment("login-ip:" + ip, WINDOW);
     }
 
-    /** Retorna um lock por chave para serializar check/record/reset e evitar corrida. */
+    /** Retorna um lock por conta para serializar check/record/reset e evitar corrida. */
     public Object lock(String key) {
-        return locks.computeIfAbsent(key, ignored -> new Object());
+        return locks[Math.floorMod(key.hashCode(), locks.length)];
     }
 
     /** Zera o estado; usado pelos testes para isolar cenarios. */
     public void clear() {
         store.clear();
-        locks.clear();
     }
 }
