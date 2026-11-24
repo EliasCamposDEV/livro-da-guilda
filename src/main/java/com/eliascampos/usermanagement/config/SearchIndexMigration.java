@@ -31,11 +31,12 @@ public class SearchIndexMigration implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
+        // auto-index-creation esta desligado: garante os indices tambem em subidas posteriores.
+        createIndexes();
         if (mongoTemplate.findById(VERSION, Document.class, MIGRATIONS) != null) {
             return;
         }
         backfillNames();
-        createIndexes();
         try {
             mongoTemplate.insert(new Document("_id", VERSION).append("appliedAt", Instant.now()), MIGRATIONS);
         } catch (DuplicateKeyException ignored) {
@@ -49,7 +50,8 @@ public class SearchIndexMigration implements ApplicationRunner {
             Object name = user.get("name");
             if (name instanceof String text) {
                 mongoTemplate.getCollection("usuarios").updateOne(
-                        new Document("_id", user.get("_id")),
+                        new Document("_id", user.get("_id"))
+                                .append("nameNormalized", new Document("$exists", false)),
                         new Document("$set", new Document("nameNormalized", text.toLowerCase(Locale.ROOT))));
             }
         }

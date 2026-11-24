@@ -77,7 +77,7 @@ public class AuthController {
             @ApiResponse(responseCode = "401", description = "E-mail ou senha inválidos",
                     content = @Content(mediaType = "application/problem+json",
                             schema = @Schema(implementation = ApiError.class))),
-            @ApiResponse(responseCode = "429", description = "Muitas tentativas de login",
+            @ApiResponse(responseCode = "429", description = "Muitas tentativas",
                     headers = @Header(name = "Retry-After",
                             description = "Segundos até poder tentar novamente"),
                     content = @Content(mediaType = "application/problem+json",
