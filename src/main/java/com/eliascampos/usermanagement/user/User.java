@@ -25,8 +25,10 @@ public class User {
 
     private Instant passwordResetExpiresAt;
 
+    @Indexed
     private UserRole role;
 
+    @Indexed
     private boolean active;
 
     // Versao do refresh token em vigor: cada refresh emitido carrega este numero e a rotacao o incrementa.

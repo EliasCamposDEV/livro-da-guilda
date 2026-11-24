@@ -90,7 +90,7 @@ public class UserService {
         List<Criteria> filters = new ArrayList<>();
 
         if (StringUtils.hasText(search)) {
-            String regex = Pattern.quote(search.trim());
+            String regex = "^" + Pattern.quote(search.trim());
             filters.add(new Criteria().orOperator(
                     Criteria.where("name").regex(regex, "i"),
                     Criteria.where("email").regex(regex, "i")
