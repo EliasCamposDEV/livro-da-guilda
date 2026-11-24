@@ -76,11 +76,18 @@ public class UserService {
     public PageResponse<UserResponse> findAll(String search, UserRole role, Boolean active, Pageable pageable) {
         // Limita a ordenacao a campos indexados e seguros, evitando sort por
         // campos sensiveis (ex.: passwordHash) ou full scan em campos sem indice.
-        java.util.Set<String> allowedSortFields = java.util.Set.of(
-                "name", "email", "role", "active", "createdAt", "updatedAt"
+        // O nome publico `name` usa o campo indexado `nameNormalized`.
+        Map<String, String> sortFields = Map.of(
+                "name", "nameNormalized",
+                "email", "email",
+                "role", "role",
+                "active", "active",
+                "createdAt", "createdAt",
+                "updatedAt", "updatedAt"
         );
         java.util.List<Sort.Order> safeOrders = pageable.getSort().stream()
-                .filter(order -> allowedSortFields.contains(order.getProperty()))
+                .filter(order -> sortFields.containsKey(order.getProperty()))
+                .map(order -> new Sort.Order(order.getDirection(), sortFields.get(order.getProperty())))
                 .toList();
         Sort safeSort = safeOrders.isEmpty() ? Sort.unsorted() : Sort.by(safeOrders);
         Pageable safePageable = PageRequest.of(
@@ -90,10 +97,12 @@ public class UserService {
         List<Criteria> filters = new ArrayList<>();
 
         if (StringUtils.hasText(search)) {
-            String regex = "^" + Pattern.quote(search.trim());
+            // Ambos os campos sao normalizados, entao a regex ancorada usa indice.
+            String term = search.trim().toLowerCase(Locale.ROOT);
+            String regex = "^" + Pattern.quote(term);
             filters.add(new Criteria().orOperator(
-                    Criteria.where("name").regex(regex, "i"),
-                    Criteria.where("email").regex(regex, "i")
+                    Criteria.where("nameNormalized").regex(regex),
+                    Criteria.where("email").regex(regex)
             ));
         }
         if (role != null) {

@@ -127,6 +127,11 @@ class UserControllerIntegrationTest {
                 .andExpect(jsonPath("$.totalElements").value(1))
                 .andExpect(jsonPath("$.content[0].email").value("bruno@email.com"));
 
+        perform(get("/api/v1/users").param("search", "BRUNO"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].email").value("bruno@email.com"));
+
         perform(get("/api/v1/users").param("role", "ADMIN"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalElements").value(3));

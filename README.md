@@ -170,7 +170,7 @@ Base: `/api/v1/users`
 | POST | `/auth/reset-password` | Redefine a senha com o token (público) |
 | POST | `/auth/logout` | Invalida os refresh tokens do usuário autenticado |
 
-Parâmetros de listagem: `page`, `size` (máx. 50), `sort`, `search`, `role` (USER/ADMIN), `active` (true/false).
+Parâmetros de listagem: `page`, `size` (máx. 50), `sort`, `search`, `role` (USER/ADMIN), `active` (true/false). A busca é por prefixo em nome e e-mail normalizados, atendida por índice. O `sort` aceita apenas `name`, `email`, `role`, `active`, `createdAt` e `updatedAt`, todos com índice.
 
 `GET /api/v1/audit` usa paginação por cursor: `cursor` (opaco, da resposta anterior) e `limit` (padrão 20, máx. 50). A resposta traz `content` e `nextCursor`, sem contagem total. Ordem fixa: `timestamp` e `_id` decrescentes.
 

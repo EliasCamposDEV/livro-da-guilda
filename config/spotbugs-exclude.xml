@@ -9,14 +9,14 @@
     o proprio ServletOutputStream/PrintWriter ao container. AppUserDetails guarda
     o documento User para auditoria/refresh; copiar perderia identidade e versao.
     O health indicator guarda o MongoTemplate para fazer ping so no banco da aplicacao.
-    A migracao de indices guarda o MongoTemplate para criar os indices na subida.
+    As migracoes de indices guardam o MongoTemplate para criar os indices na subida.
 
     CT_CONSTRUCTOR_THROW: JwtService valida o segredo no construtor (fail-fast).
     A classe nao define finalizer, entao nao ha risco de finalizer attack.
   -->
   <Match>
     <Bug code="EI,EI2"/>
-    <Class name="~com\.eliascampos\.usermanagement\.(audit\.AuditService|auth\.AuthController|auth\.LoginRateLimiter|auth\.PasswordResetRateLimiter|auth\.PasswordResetService|auth\.RedisRateLimitStore|auth\.RefreshRateLimiter|config\.ApplicationDatabaseHealthIndicator|config\.IndexMigration|config\.SwaggerUiCssFilter\$BufferingResponseWrapper|security\.AppUserDetails|security\.DemoReadOnlyFilter|security\.JwtService|user\.MeController|user\.UserController|user\.UserService|user\.UserVersionMigration)"/>
+    <Class name="~com\.eliascampos\.usermanagement\.(audit\.AuditService|auth\.AuthController|auth\.LoginRateLimiter|auth\.PasswordResetRateLimiter|auth\.PasswordResetService|auth\.RedisRateLimitStore|auth\.RefreshRateLimiter|config\.ApplicationDatabaseHealthIndicator|config\.IndexMigration|config\.SearchIndexMigration|config\.SwaggerUiCssFilter\$BufferingResponseWrapper|security\.AppUserDetails|security\.DemoReadOnlyFilter|security\.JwtService|user\.MeController|user\.UserController|user\.UserService|user\.UserVersionMigration)"/>
   </Match>
   <Match>
     <Bug pattern="CT_CONSTRUCTOR_THROW"/>

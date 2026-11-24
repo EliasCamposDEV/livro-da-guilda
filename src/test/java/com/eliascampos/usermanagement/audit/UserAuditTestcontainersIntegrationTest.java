@@ -154,13 +154,31 @@ class UserAuditTestcontainersIntegrationTest {
     void indexesComeFromVersionedMigration() {
         assertThat(mongoTemplate.indexOps("usuarios").getIndexInfo())
                 .extracting(IndexInfo::getName)
-                .contains("email", "passwordResetTokenHash", "role", "active");
+                .contains("email", "passwordResetTokenHash", "role", "active",
+                        "nameNormalized", "createdAt", "updatedAt");
         assertThat(mongoTemplate.indexOps("auditoria").getIndexInfo())
                 .extracting(IndexInfo::getName)
                 .contains("audit_timestamp_id", "actorEmail", "action", "targetUserId");
         assertThat(mongoTemplate.findOne(
                 new Query(Criteria.where("_id").is("001-indices")), Document.class, "schema_migrations"))
                 .isNotNull();
+        assertThat(mongoTemplate.findOne(
+                new Query(Criteria.where("_id").is("002-busca-ordem")), Document.class, "schema_migrations"))
+                .isNotNull();
+    }
+
+    @Test
+    void searchMigrationBackfillsLegacyNames() {
+        mongoTemplate.getCollection("usuarios").insertOne(new Document("_id", "legacy-1")
+                .append("name", "Legado Antigo")
+                .append("email", "legado@email.com"));
+
+        new com.eliascampos.usermanagement.config.SearchIndexMigration(mongoTemplate).run(null);
+
+        Document legacy = mongoTemplate.getCollection("usuarios")
+                .find(new Document("_id", "legacy-1")).first();
+        assertThat(legacy).isNotNull();
+        assertThat(legacy.getString("nameNormalized")).isEqualTo("legado antigo");
     }
 
     @Test

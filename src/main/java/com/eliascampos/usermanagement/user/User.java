@@ -17,6 +17,8 @@ public class User implements Serializable {
 
     private String name;
 
+    private String nameNormalized;
+
     private String email;
 
     private String passwordHash;
@@ -44,7 +46,8 @@ public class User implements Serializable {
     }
 
     public User(String name, String email, UserRole role, String passwordHash) {
-        this.name = name;
+        this.name = name.trim();
+        this.nameNormalized = normalizeName(name);
         this.email = email;
         this.role = role;
         this.passwordHash = passwordHash;
@@ -54,7 +57,8 @@ public class User implements Serializable {
     }
 
     public void update(String name, String email, UserRole role) {
-        this.name = name;
+        this.name = name.trim();
+        this.nameNormalized = normalizeName(name);
         this.email = email;
         this.role = role;
         this.updatedAt = Instant.now();
@@ -97,6 +101,10 @@ public class User implements Serializable {
         return name;
     }
 
+    public String getNameNormalized() {
+        return nameNormalized;
+    }
+
     public String getEmail() {
         return email;
     }
@@ -131,5 +139,9 @@ public class User implements Serializable {
 
     public Instant getUpdatedAt() {
         return updatedAt;
+    }
+
+    private static String normalizeName(String name) {
+        return name == null ? "" : name.trim().toLowerCase(java.util.Locale.ROOT);
     }
 }
