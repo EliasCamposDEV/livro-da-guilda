@@ -87,6 +87,7 @@ class UserAuditTestcontainersIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalElements").value(1))
                 .andExpect(jsonPath("$.content[0].action").value("USER_CREATED"))
+                .andExpect(jsonPath("$.content[0].actorEmail").value(ADMIN_EMAIL))
                 .andExpect(jsonPath("$.content[0].targetUserEmail").value("usuario.tc@email.com"));
     }
 

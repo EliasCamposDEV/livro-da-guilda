@@ -13,6 +13,10 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
@@ -46,6 +50,9 @@ class SecurityIntegrationTest {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private MongoTemplate mongoTemplate;
 
     @Autowired
     private LoginRateLimiter loginRateLimiter;
@@ -231,6 +238,34 @@ class SecurityIntegrationTest {
                 .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
 
         mockMvc.perform(post("/auth/logout"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
+    }
+
+    @Test
+    void shouldUseDatabaseRoleAfterDemotion() throws Exception {
+        String token = login(ADMIN_EMAIL, ADMIN_PASSWORD);
+
+        mongoTemplate.updateFirst(
+                new Query(Criteria.where("email").is(ADMIN_EMAIL)),
+                new Update().set("role", "USER"),
+                User.class);
+
+        mockMvc.perform(get("/api/v1/users").header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
+    }
+
+    @Test
+    void shouldRejectAccessAfterDeactivation() throws Exception {
+        String token = login(ADMIN_EMAIL, ADMIN_PASSWORD);
+
+        mongoTemplate.updateFirst(
+                new Query(Criteria.where("email").is(ADMIN_EMAIL)),
+                new Update().set("active", false),
+                User.class);
+
+        mockMvc.perform(get("/api/v1/users").header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
     }
