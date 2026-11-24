@@ -7,7 +7,7 @@
 
 Na demo, faça login em `POST /auth/login` com `demo@eliascampos.dev` / `demo-readonly-2026`, copie o `accessToken`, clique em **Authorize** e cole só o token (sem "Bearer"). Clique em um endpoint para expandir e depois em **Execute**. A demo é somente leitura: `GET` funciona, `POST`/`PUT`/`PATCH`/`DELETE` respondem `403`. O primeiro acesso pode levar ~1 minuto (instância free dorme).
 
-API REST para CRUD de usuários, com validação, paginação, filtros e documentação OpenAPI. Java 21, Spring Boot 4.1.0, MongoDB.
+API REST para CRUD de usuários, com validação, paginação, filtros e documentação OpenAPI. Java 21, Spring Boot 4.1.3, MongoDB.
 
 O nome vem de RPG: o livro da guilda registra quem é membro, qual papel tem e o que pode fazer, a mesma ideia de um cadastro de usuários com JWT e papéis (`ADMIN`).
 
