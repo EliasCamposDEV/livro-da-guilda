@@ -68,6 +68,8 @@ Fazer isso se houver suspeita de vazamento ou a cada ciclo de rotação definido
 ## Health e observabilidade
 
 - `GET /actuator/health` é público e não expõe detalhes em prod; use o `Liveness`/`Readiness` do orquestrador.
+- `GET /actuator/prometheus` exige token e expõe métricas HTTP, incluindo `http_server_requests_seconds_count`, e o contador `audit.write.failures`.
+- Toda resposta traz `X-Request-Id`; o mesmo valor vai no MDC `requestId` dos logs ECS em JSON no stdout.
 - O compose já tem healthcheck da API e do Mongo.
 - Logs vão para stdout; colete com o runtime (Docker, systemd, etc.).
 

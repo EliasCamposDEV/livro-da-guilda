@@ -45,6 +45,24 @@ class ApplicationYamlTest {
     }
 
     @Test
+    void shouldEnableStructuredConsoleLogging() throws IOException {
+        PropertySource<?> source = new YamlPropertySourceLoader()
+                .load("application", new ClassPathResource("application.yml")).get(0);
+
+        assertEquals("ecs", source.getProperty("logging.structured.format.console"));
+    }
+
+    @Test
+    void shouldConfigureLivenessAndReadinessProbes() throws IOException {
+        PropertySource<?> source = new YamlPropertySourceLoader()
+                .load("application", new ClassPathResource("application.yml")).get(0);
+
+        assertEquals(true, source.getProperty("management.endpoint.health.probes.enabled"));
+        assertEquals("livenessState", source.getProperty("management.endpoint.health.group.liveness.include"));
+        assertEquals("readinessState", source.getProperty("management.endpoint.health.group.readiness.include"));
+    }
+
+    @Test
     void shouldKeepDemoReadOnlySettingAfterMergingKeys() throws IOException {
         List<PropertySource<?>> sources = new YamlPropertySourceLoader()
                 .load("application-demo", new ClassPathResource("application-demo.yml"));

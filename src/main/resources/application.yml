@@ -60,6 +60,10 @@ management:
           include: readinessState
 
 logging:
+  # Logs ECS em JSON; o MDC requestId entra em cada linha via RequestIdFilter.
+  structured:
+    format:
+      console: ecs
   level:
     org.mongodb.driver: WARN
 

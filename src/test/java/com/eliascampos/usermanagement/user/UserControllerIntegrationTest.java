@@ -1,5 +1,6 @@
 package com.eliascampos.usermanagement.user;
 
+import com.eliascampos.usermanagement.config.RequestIdFilter;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -117,6 +118,7 @@ class UserControllerIntegrationTest {
                         .param("size", "2")
                         .param("sort", "name,asc"))
                 .andExpect(status().isOk())
+                .andExpect(header().exists(RequestIdFilter.HEADER))
                 .andExpect(jsonPath("$.content.length()").value(2))
                 .andExpect(jsonPath("$.totalElements").value(4))
                 .andExpect(jsonPath("$.totalPages").value(2))
