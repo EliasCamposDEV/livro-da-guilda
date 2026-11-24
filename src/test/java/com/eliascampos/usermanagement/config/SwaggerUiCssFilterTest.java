@@ -18,13 +18,17 @@ class SwaggerUiCssFilterTest {
     @Test
     void shouldInjectStylesheetMetaAndAccessibilityEnhancement() throws Exception {
         MockHttpServletResponse response = filterSwagger("/swagger-ui/index.html",
-                "<html><head><title>API</title></head><body></body></html>");
+                "<html><head><title>Swagger UI</title></head><body></body></html>");
 
         String body = response.getContentAsString();
         assertTrue(body.contains("<meta name=\"description\""), body);
+        assertTrue(body.contains("<title>Livro da Guilda - API</title>"), body);
         assertTrue(body.contains("/swagger-custom.css"), body);
         assertTrue(body.contains("lg-operations-heading"), body);
         assertTrue(body.contains("Servidor"), body);
+        assertTrue(body.contains("swagger-ui__skip-link"), body);
+        assertTrue(body.contains("dark-mode-toggle button"), body);
+        assertTrue(body.contains("setAttribute('role', 'main')"), body);
         assertTrue(body.contains("</head>"), body);
         assertEquals("text/html;charset=UTF-8", response.getContentType());
     }

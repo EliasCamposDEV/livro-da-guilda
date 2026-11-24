@@ -92,6 +92,16 @@ html.dark-mode .swagger-ui ::selection {
   margin-bottom: 12px;
 }
 
+/* Badges de versao: o Swagger UI deixa so 2px verticais e o texto encosta no fundo. */
+.swagger-ui .info .title small {
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+
+.swagger-ui .info .title small pre {
+  padding: 0;
+}
+
 .swagger-ui .info .renderedMarkdown,
 .swagger-ui .info .renderedMarkdown p,
 .swagger-ui .info .renderedMarkdown ul,

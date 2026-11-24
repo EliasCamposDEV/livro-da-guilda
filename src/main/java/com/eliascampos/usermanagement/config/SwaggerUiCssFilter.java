@@ -16,25 +16,51 @@ import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
 
 /**
- * Injeta no HTML do Swagger UI a folha de estilo propria, o meta description e um
- * ajuste progressivo de acessibilidade (rotulo do seletor de servidor e ordem de titulos).
+ * Injeta no HTML do Swagger UI a folha de estilo propria, o meta description, o titulo
+ * da pagina e um ajuste progressivo de acessibilidade (rotulo do seletor de servidor,
+ * skip link, landmark principal, rotulo do botao de tema e ordem de titulos).
  * O buffer evita o conflito entre getOutputStream() e getWriter() do ContentCachingResponseWrapper.
  */
 @Component
 public class SwaggerUiCssFilter extends OncePerRequestFilter {
 
+    private static final String DOCUMENT_TITLE = "Livro da Guilda - API";
+    private static final String SWAGGER_TITLE = "<title>Swagger UI</title>";
     private static final String HEAD_INJECTION = """
             <meta name="description" content="API de gerenciamento de usuarios com JWT, auditoria e demo publica somente leitura.">
             <script>
             (function () {
+              function hasName(node) {
+                return Boolean(((node.getAttribute('aria-label') || '') + ' ' +
+                  (node.getAttribute('title') || '') + ' ' + (node.textContent || '')).trim());
+              }
               function enhance() {
                 var select = document.getElementById('servers');
                 if (select && !select.hasAttribute('aria-label')) {
                   select.setAttribute('aria-label', 'Servidor');
                 }
-                var theme = document.querySelector('.topbar button');
-                if (theme && !(theme.textContent || '').trim() && !theme.hasAttribute('aria-label')) {
+                var theme = document.querySelector('.dark-mode-toggle button, .topbar button');
+                if (theme && !hasName(theme)) {
                   theme.setAttribute('aria-label', 'Alternar tema');
+                }
+                var main = document.querySelector('.swagger-ui');
+                if (main) {
+                  if (main.getAttribute('role') !== 'main') {
+                    main.setAttribute('role', 'main');
+                  }
+                  if (!main.id) {
+                    main.id = 'lg-main';
+                  }
+                  if (!main.hasAttribute('tabindex')) {
+                    main.setAttribute('tabindex', '-1');
+                  }
+                  if (!document.querySelector('.swagger-ui__skip-link')) {
+                    var skip = document.createElement('a');
+                    skip.className = 'swagger-ui__skip-link';
+                    skip.href = '#lg-main';
+                    skip.textContent = 'Pular para o conteudo';
+                    document.body.insertBefore(skip, document.body.firstChild);
+                  }
                 }
                 var firstTag = document.querySelector('.opblock-tag-section');
                 if (firstTag && !document.getElementById('lg-operations-heading')) {
@@ -44,7 +70,8 @@ public class SwaggerUiCssFilter extends OncePerRequestFilter {
                   heading.textContent = 'Operacoes da API';
                   firstTag.parentNode.insertBefore(heading, firstTag);
                 }
-                return Boolean(firstTag && select);
+                return Boolean(firstTag && select && theme && main &&
+                  document.querySelector('.swagger-ui__skip-link'));
               }
               function run() {
                 if (enhance() && observer) {
@@ -83,6 +110,7 @@ public class SwaggerUiCssFilter extends OncePerRequestFilter {
         String text = new String(body, StandardCharsets.UTF_8);
 
         if (text.contains("</head>") && !text.contains("swagger-custom.css")) {
+            text = text.replace(SWAGGER_TITLE, "<title>" + DOCUMENT_TITLE + "</title>");
             text = text.replace("</head>", HEAD_INJECTION + "</head>");
             byte[] bytes = text.getBytes(StandardCharsets.UTF_8);
             response.setContentType("text/html;charset=UTF-8");
