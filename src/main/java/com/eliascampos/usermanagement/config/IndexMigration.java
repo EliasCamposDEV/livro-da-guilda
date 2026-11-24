@@ -46,24 +46,24 @@ public class IndexMigration implements ApplicationRunner {
     }
 
     private void createIndexes() {
-        mongoTemplate.indexOps("usuarios").ensureIndex(
+        mongoTemplate.indexOps("usuarios").createIndex(
                 new Index().on("email", Sort.Direction.ASC).unique().named("email"));
-        mongoTemplate.indexOps("usuarios").ensureIndex(
+        mongoTemplate.indexOps("usuarios").createIndex(
                 new Index().on("passwordResetTokenHash", Sort.Direction.ASC).unique().sparse()
                         .named("passwordResetTokenHash"));
-        mongoTemplate.indexOps("usuarios").ensureIndex(
+        mongoTemplate.indexOps("usuarios").createIndex(
                 new Index().on("role", Sort.Direction.ASC).named("role"));
-        mongoTemplate.indexOps("usuarios").ensureIndex(
+        mongoTemplate.indexOps("usuarios").createIndex(
                 new Index().on("active", Sort.Direction.ASC).named("active"));
 
-        mongoTemplate.indexOps("auditoria").ensureIndex(
+        mongoTemplate.indexOps("auditoria").createIndex(
                 new Index().on("timestamp", Sort.Direction.DESC).on("_id", Sort.Direction.DESC)
                         .named("audit_timestamp_id"));
-        mongoTemplate.indexOps("auditoria").ensureIndex(
+        mongoTemplate.indexOps("auditoria").createIndex(
                 new Index().on("actorEmail", Sort.Direction.ASC).named("actorEmail"));
-        mongoTemplate.indexOps("auditoria").ensureIndex(
+        mongoTemplate.indexOps("auditoria").createIndex(
                 new Index().on("action", Sort.Direction.ASC).named("action"));
-        mongoTemplate.indexOps("auditoria").ensureIndex(
+        mongoTemplate.indexOps("auditoria").createIndex(
                 new Index().on("targetUserId", Sort.Direction.ASC).named("targetUserId"));
     }
 }
