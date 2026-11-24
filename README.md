@@ -47,7 +47,8 @@ $env:MONGODB_URI="mongodb://localhost:27018/usuarios"
 mvn spring-boot:run
 ```
 
-`MONGODB_URI` é obrigatória em `prod`; sem ela a aplicação não sobe.
+`MONGODB_URI`
+- Em producao, use um usuario MongoDB com privilegios minimos (leitura/escrita na base da aplicacao), nao o root. é obrigatória em `prod`; sem ela a aplicação não sobe.
 
 Precisa de JDK 21 (o `mvn` falha se o `JAVA_HOME` apontar para outra versão).
 

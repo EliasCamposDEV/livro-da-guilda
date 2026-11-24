@@ -1,6 +1,6 @@
 # Spec 005 - Demo pública e deploy
 
-Status: implementada em 2026-11-22. Critérios de aceite validados por testes unitários e de integração (Testcontainers).
+Status: implementada em 2026-11-22. Critérios de aceite validados por testes unitários e de integração (MongoDB embarcado (dev/test) e Testcontainers (2 testes de integracao)).
 
 ## Contexto
 A API precisa ser demonstrável publicamente sem risco de alteração de dados. A demo é somente leitura: visitante pode logar e ler, mas não escreve. Além disso, a aplicação precisa ser publicável em plataforma gratuita (Render) com documentação clara.
@@ -21,7 +21,7 @@ Prover perfil `demo` com dados fictícios e bloqueio de escrita, landing page re
 - RF5: Login, refresh e logout continuam funcionando na demo.
 - RF6: Raiz `/` redireciona para `/swagger-ui.html` (apenas no perfil demo).
 - RF7: Swagger UI habilitado com try-it-out, persistência de autorização.
-- RF8: CI (`mvn -B verify`) roda build + testes (incluindo Testcontainers) no GitHub Actions.
+- RF8: CI (`mvn -B verify`) roda build + testes (incluindo MongoDB embarcado (dev/test) e Testcontainers (2 testes de integracao)) no GitHub Actions.
 - RF9: Deploy documentado para Render (Dockerfile, render.yaml, docs/deploy-render.md).
 - RF10: Backup e rotação de segredo documentados (docs/operacao.md).
 
@@ -82,7 +82,7 @@ Prover perfil `demo` com dados fictícios e bloqueio de escrita, landing page re
 ## Testes esperados
 - Demo: login e leitura funcionam; escrita retorna 403 sem alterar banco.
 - `DemoReadOnlyFilterTest`: paths bloqueados, encoding, métodos seguros.
-- CI verde com Testcontainers.
+- CI verde com MongoDB embarcado (dev/test) e Testcontainers (2 testes de integracao).
 
 ## Critérios de aceite
 - [x] Perfil demo com dados fictícios.

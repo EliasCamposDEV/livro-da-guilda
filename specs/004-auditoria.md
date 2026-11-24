@@ -1,6 +1,6 @@
 # Spec 004 - Auditoria de ações administrativas
 
-Status: implementada em 2026-11-22. Critérios de aceite validados por testes unitários e de integração (Testcontainers).
+Status: implementada em 2026-11-22. Critérios de aceite validados por testes unitários e de integração (MongoDB embarcado (dev/test) e Testcontainers (2 testes de integracao)).
 
 ## Contexto
 Operações administrativas (criação, edição, ativação, exclusão de usuários, troca de senha, logout, recuperação de senha) precisam ser rastreáveis para compliance e investigação. A auditoria registra quem fez, sobre quem, quando, de onde (IP) e detalhes da ação.

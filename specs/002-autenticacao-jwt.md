@@ -1,6 +1,6 @@
 # Spec 002 - Autenticacao e JWT
 
-Status: implementada em 2026-11-22. Critérios de aceite validados por testes unitários e de integração (Testcontainers).
+Status: implementada em 2026-11-22. Critérios de aceite validados por testes unitários e de integração (MongoDB embarcado (dev/test) e Testcontainers (2 testes de integracao)).
 
 ## Contexto
 A API precisa autenticar clientes (humanos ou outros sistemas) e autorizar acesso aos recursos protegidos por papel (`ADMIN`). O cadastro de usuários (spec 003) depende deste fluxo para emitir tokens. Sem autenticação, toda a API de escrita ficaria exposta.

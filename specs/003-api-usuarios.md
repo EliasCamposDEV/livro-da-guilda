@@ -1,6 +1,6 @@
 # Spec 003 - API de usuários
 
-Status: implementada em 2026-11-22. Critérios de aceite validados por testes unitários e de integração (Testcontainers).
+Status: implementada em 2026-11-22. Critérios de aceite validados por testes unitários e de integração (MongoDB embarcado (dev/test) e Testcontainers (2 testes de integracao)).
 
 ## Contexto
 O "livro da guilda" registra membros (usuários) e seus papéis. A API precisa de CRUD completo com validação, paginação, busca e filtros, além de troca de senha e ativação/desativação. Apenas `ADMIN` pode gerenciar usuários; o próprio usuário pode trocar sua senha.
@@ -133,4 +133,6 @@ Expor `/api/v1/users` (CRUD, paginação, busca, filtros) e `/api/v1/me/password
 ## Decisões
 - Exclusão física + auditoria: histórico preservado na auditoria.
 - Papel apenas USER/ADMIN: simplicidade para o escopo.
-- Id como subject do JWT: mudança de e-mail invalida refresh indiretamente.
+- Id como subject do JWT
+- RF12: rebaixamento/desativacao/exclusao do ultimo administrador ativo e recusado (400 `INVALID_REQUEST`).
+- Concorrencia: mutacoes de administrador sao serializadas; conflito de versao devolve 409 `CONFLICT`.: mudança de e-mail invalida refresh indiretamente.

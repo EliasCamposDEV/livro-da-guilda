@@ -1,6 +1,6 @@
 # Spec 001 - Recuperacao de senha
 
-Status: implementada em 2026-11-22. Critérios de aceite validados por testes unitários e de integração (Testcontainers).
+Status: implementada em 2026-11-22. Critérios de aceite validados por testes unitários e de integração (MongoDB embarcado (dev/test) e Testcontainers (2 testes de integracao)).
 
 ## Contexto
 Hoje o usuario so consegue trocar a senha estando autenticado (`PUT /api/v1/me/password`). Quem esqueceu a senha fica sem saida. A API tambem nao tem um canal para entregar um token de redefinicao.
@@ -40,7 +40,7 @@ Permitir que o usuario solicite a redefinicao de senha e defina uma nova senha c
 - RNF7: O rate limit e em memoria e por instancia, como o do login. Aplicar limpeza de chaves expiradas e limite de chaves para evitar crescimento sem controle. Em mais de uma replica, cada uma conta separadamente (ver Limitacoes).
 - RNF8: O endpoint de reset nao precisa de rate limit proprio: o token tem 256 bits e o BCrypt so e pago depois de o token ser validado. Erros de validacao do corpo sao rejeitados antes do consumo.
 - RNF9: Swagger documenta os dois endpoints, os corpos, os status 204, 400, 403, 429 e 503, com exemplos reais. Nenhum schema de resposta inclui token. A descricao da demo deve incluir as rotas de recuperacao, e o exemplo de 429 nao pode falar em login.
-- RNF10: Testes de integracao rodam com Testcontainers e `mvn verify` no CI.
+- RNF10: Testes de integracao rodam com MongoDB embarcado (dev/test) e Testcontainers (2 testes de integracao) e `mvn verify` no CI.
 - RNF11: Compatibilidade: os novos campos sao opcionais, nao alteram `UserResponse` e o indice e criado no start com `auto-index-creation: true`.
 
 ## Endpoints
@@ -124,7 +124,7 @@ Sem migracao: documentos antigos ficam sem os campos e o indice esparso aceita v
 - Nova solicitacao substitui o token anterior e invalida o primeiro.
 - Troca de senha autenticada, desativacao e alteracao de e-mail limpam o token pendente.
 
-### Integracao (MockMvc + Testcontainers)
+### Integracao (MockMvc + MongoDB embarcado (dev/test) e Testcontainers (2 testes de integracao))
 - E-mail ativo: forgot retorna 204, cria hash e expiracao; reset com o token retorna 204, troca a senha, incrementa `tokenVersion` e limpa o token.
 - Login com a senha antiga falha; login com a nova funciona.
 - E-mail inexistente: 204, nenhum usuario ou token criado.
@@ -141,7 +141,7 @@ Sem migracao: documentos antigos ficam sem os campos e o indice esparso aceita v
 - Swagger: `/v3/api-docs` contem as duas rotas e os exemplos de 400, 403, 429 e 503.
 
 ### CI
-- `mvn -B verify` verde com os testes de Testcontainers no GitHub Actions.
+- `mvn -B verify` verde com os testes de MongoDB embarcado (dev/test) e Testcontainers (2 testes de integracao) no GitHub Actions.
 
 ## Criterios de aceite
 - [x] `POST /auth/forgot-password` responde 204 para e-mail ativo, inexistente e inativo, sem revelar qual caso ocorreu.
@@ -156,7 +156,7 @@ Sem migracao: documentos antigos ficam sem os campos e o indice esparso aceita v
 - [x] `delivery=none` responde 503 e nao grava token; `delivery=log` so registra o token em dev/test e nunca na resposta HTTP.
 - [x] Auditoria registra solicitacao e conclusao com alvo, IP e ator `system`, sem token ou hash.
 - [x] Swagger documenta as duas rotas e os status 204, 400, 403, 429 e 503 com exemplos reais, sem token no schema de resposta.
-- [x] Testes unitarios e de integracao com Testcontainers passam localmente e no CI.
+- [x] Testes unitarios e de integracao com MongoDB embarcado (dev/test) e Testcontainers (2 testes de integracao) passam localmente e no CI.
 - [x] README explica como obter o token no log em dev e por que a demo retorna 403.
 
 ## Limitacoes e riscos
