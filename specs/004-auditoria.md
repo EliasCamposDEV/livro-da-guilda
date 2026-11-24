@@ -24,7 +24,7 @@ Persistir eventos de auditoria em coleção dedicada e expor listagem paginada/f
 
 ## Requisitos nao funcionais
 - RNF1: Eventos persistidos em coleção `auditoria` (MongoDB).
-- RNF2: Busca por `actorEmail` é case-insensitive com escaping seguro (sem injeção de regex).
+- RNF2: Busca por `actorEmail` usa igualdade em e-mail normalizado (minúsculas), sem regex.
 - RNF3: Paginação por keyset: `limit` padrão 20, ordem fixa `timestamp` desc e `_id` desc, `nextCursor` opaco. Sem `count` na listagem.
 - RNF4: Filtros combináveis (AND).
 - RNF5: Falhas de auditoria são registradas em log e não mascaram a operação principal.
@@ -82,7 +82,7 @@ Nenhuma propriedade específica. Usa o MongoDB padrão da aplicação.
 
 ## Limitações e riscos
 - Sem política de retenção; coleção pode crescer indefinidamente.
-- Erro ao salvar evento propaga 500 e pode mascarar a operação principal.
+- Erro ao salvar evento é logado e contabilizado em `audit.write.failures`; a operação principal não é mascarada (risco aceito).
 - Sem transação entre operação principal e auditoria.
 - Sem total de registros: clientes percorrem `nextCursor` até ficar nulo.
 

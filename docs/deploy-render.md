@@ -25,12 +25,13 @@ Tempo estimado: 20 a 30 minutos. Custo: R$ 0.
    - privilégio: *Specific privileges* -> `readWrite` apenas no banco `livro-da-guilda`.
      Isso cobre `usuarios`, `auditoria` e `schema_migrations`. Nao use `root` nem
      `readWriteAnyDatabase`.
-3. **Network Access** → *Add IP Address* → `0.0.0.0/0`.
-   O Render free não tem IP fixo de saída; liberar tudo é o caminho simples. A proteção
-   real fica no usuário/senha do banco e no fato de a API ser somente leitura.
+3. **Network Access**: prefira allowlist de IPs de saída ou private endpoint quando o
+   plano permitir. O M0/free não garante IP fixo; se a única alternativa for
+   `0.0.0.0/0`, registre o risco como aceito e mantenha o usuário `readWrite` e a senha
+   forte. Não use `root` nem `readWriteAnyDatabase`.
 4. **Connect** → *Drivers* → copie a string e **coloque o nome do banco**:
    ```text
-   mongodb+srv://livro-da-guilda:SENHA@cluster0.xxxxx.mongodb.net/livro-da-guilda?retryWrites=true&w=majority
+   mongodb+srv://<usuario>:<senha>@<cluster>.mongodb.net/<banco>?retryWrites=true&w=majority
    ```
    Se a senha tiver caracteres especiais, use a versão URL-encoded.
 

@@ -31,6 +31,9 @@ public class SearchIndexMigration implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
+        if (mongoTemplate.findById(VERSION, Document.class, MIGRATIONS) != null) {
+            return;
+        }
         backfillNames();
         createIndexes();
         try {

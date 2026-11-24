@@ -7,7 +7,7 @@
 
 Na demo, faça login em `POST /auth/login` com `demo@eliascampos.dev` / `demo-readonly-2026`, copie o `accessToken`, clique em **Authorize** e cole só o token (sem "Bearer"). Clique em um endpoint para expandir e depois em **Execute**. A demo é somente leitura: `GET` funciona, `POST`/`PUT`/`PATCH`/`DELETE` respondem `403`. O primeiro acesso pode levar ~1 minuto (instância free dorme).
 
-API REST para CRUD de usuários, com validação, paginação, filtros e documentação OpenAPI. Java 21, Spring Boot 3.5, MongoDB.
+API REST para CRUD de usuários, com validação, paginação, filtros e documentação OpenAPI. Java 21, Spring Boot 4.1.3, MongoDB.
 
 O nome vem de RPG: o livro da guilda registra quem é membro, qual papel tem e o que pode fazer, a mesma ideia de um cadastro de usuários com JWT e papéis (`ADMIN`).
 
@@ -47,8 +47,8 @@ $env:MONGODB_URI="mongodb://localhost:27018/usuarios"
 mvn spring-boot:run
 ```
 
-`MONGODB_URI`
-- Em producao, use um usuario MongoDB com privilegios minimos (leitura/escrita na base da aplicacao), nao o root. é obrigatória em `prod`; sem ela a aplicação não sobe.
+- `MONGODB_URI` é obrigatória em `prod`; sem ela a aplicação não sobe. Em produção, use um
+  usuário MongoDB com privilégios mínimos (leitura/escrita na base da aplicação), não o root.
 
 Precisa de JDK 21 (o `mvn` falha se o `JAVA_HOME` apontar para outra versão).
 
@@ -62,7 +62,10 @@ docker compose up --build
 
 API em http://127.0.0.1:8081, MongoDB apenas na rede interna do Compose. Para inspecionar o banco: `docker compose exec mongo mongosh usuarios`.
 
-Na primeira subida, com o banco vazio, defina `APP_BOOTSTRAP_ADMIN_EMAIL` e `APP_BOOTSTRAP_ADMIN_PASSWORD` para criar o primeiro `ADMIN` (dá para trocar com `BOOTSTRAP_ADMIN_EMAIL` e `BOOTSTRAP_ADMIN_PASSWORD` no shell ou no `.env`). Sem isso não haveria usuário para logar.
+Na primeira subida, com o banco vazio, defina `APP_BOOTSTRAP_ADMIN_EMAIL` e
+`APP_BOOTSTRAP_ADMIN_PASSWORD` no ambiente (ou `BOOTSTRAP_ADMIN_EMAIL` e
+`BOOTSTRAP_ADMIN_PASSWORD` no `.env` usado pelo Compose) para criar o primeiro `ADMIN`.
+Sem isso não haveria usuário para logar.
 
 > Os exemplos de `curl` abaixo usam a porta `8080` (perfil `dev`). Com Docker, troque por `8081`.
 
@@ -114,10 +117,10 @@ Senha atual errada devolve 400 com `code: INVALID_PASSWORD`.
 - O login usa os usuários do próprio banco (senha em BCrypt). Usuário com `active: false` não autentica.
 - O papel vem do campo `role`: token de `USER` recebe 403 em `/api/v1/users/**`.
 - Em `dev` um admin é criado na primeira subida: `admin@email.com` / `admin12345`.
-- Em `prod`, defina `APP_BOOTSTRAP_ADMIN_EMAIL` e `APP_BOOTSTRAP_ADMIN_PASSWORD` para criar o primeiro `ADMIN` em banco vazio; sem as variáveis nada é criado (no `docker compose` elas já vêm definidas).
+- Em `prod`, defina `APP_BOOTSTRAP_ADMIN_EMAIL` e `APP_BOOTSTRAP_ADMIN_PASSWORD` para criar o primeiro `ADMIN` em banco vazio; sem as variáveis nada é criado (no Compose, preencha `BOOTSTRAP_ADMIN_EMAIL` e `BOOTSTRAP_ADMIN_PASSWORD` no `.env`).
 - O perfil `demo` usa a mesma postura de `prod`, cria usuários fictícios e recusa escrita em `/api/v1/**` com `403 READ_ONLY_DEMO`; veja [docs/demo.md](docs/demo.md).
-- `JWT_SECRET`
-- `APP_SINGLE_SESSION` controla se um novo login rotaciona o `tokenVersion` e derruba refresh tokens anteriores (padrao `true`; na demo use `false`). (mínimo 32 caracteres, HS256) é obrigatória em `prod`; sem ela a aplicação não sobe.
+- `JWT_SECRET` (mínimo 32 caracteres, HS256) é obrigatório em `prod`; sem ele a aplicação não sobe.
+- `APP_SINGLE_SESSION` controla se login e refresh rotacionam o `tokenVersion` e derrubam refresh tokens anteriores (padrão `true`; na demo use `false`).
 - Validades em `app.security.jwt.ttl-seconds` (access) e `refresh-ttl-seconds` (refresh).
 - `/auth/login` bloqueia após 5 tentativas erradas por e-mail + IP em 15 minutos (429 `TOO_MANY_ATTEMPTS`), em memória e por instância.
 - CORS é desligado por padrão; libere origens com `CORS_ALLOWED_ORIGINS` (separadas por vírgula).
@@ -192,7 +195,7 @@ mvn test
 
 Os testes cobrem criação, leitura, atualização, ativação, exclusão, paginação, busca, filtros, e-mail duplicado, validação, recurso inexistente, os erros 404/405 e autenticação (401 sem token ou credencial inválida, 403 para quem não é ADMIN, emissão, rotação e troca de refresh token, recusa de token com o tipo errado ou já rotacionado, troca de senha, logout e bloqueio por excesso de tentativas). A recuperação de senha tem testes de fluxo feliz, e-mail inexistente/inativo, token inválido/expirado/reutilizado, concorrência, rate limit, auditoria, limpeza do token e indisponibilidade do canal. Os testes do modo demo garantem que login e leitura continuam funcionando e que toda escrita em `/api/v1/**` e a recuperação de senha recebem `403 READ_ONLY_DEMO` sem alterar o banco.
 
-O `mvn verify` também roda o SpotBugs com limite `Medium` e falha em qualquer achado. Excecoes documentadas ficam em `config/spotbugs-exclude.xml` (ver ADR-5).
+O `mvn verify` também roda o SpotBugs com limite `Medium` e falha em qualquer achado, e o JaCoCo exige pelo menos 80% de cobertura de instruções. Excecoes documentadas ficam em `config/spotbugs-exclude.xml` (ver ADR-5). O CI publica o relatório de cobertura e roda CodeQL, scan de dependências e da imagem Docker com Trivy.
 
 ## Documentação
 

@@ -79,6 +79,10 @@ public class JwtService {
     }
 
     public TokenResponse refresh(String refreshToken) {
+        return refresh(refreshToken, true);
+    }
+
+    public TokenResponse refresh(String refreshToken, boolean rotateVersion) {
         Jwt jwt;
         try {
             jwt = refreshTokenDecoder.decode(refreshToken);
@@ -93,6 +97,15 @@ public class JwtService {
             expected = Integer.parseInt(expectedVersion);
         } catch (NumberFormatException ex) {
             throw new InvalidRefreshTokenException();
+        }
+
+        if (!rotateVersion) {
+            // Demo compartilhada: nao incrementa tokenVersion para nao deslogar outros visitantes.
+            User current = userRepository.findById(userId)
+                    .filter(User::isActive)
+                    .filter(user -> user.getTokenVersion() == expected)
+                    .orElseThrow(InvalidRefreshTokenException::new);
+            return issue(current);
         }
 
         // Rotacao atomica: incrementa tokenVersion apenas se o valor atual for igual

@@ -148,8 +148,8 @@ public class GlobalExceptionHandler extends org.springframework.web.servlet.mvc.
     @ExceptionHandler(TooManyAttemptsException.class)
     public ResponseEntity<ProblemDetail> handleTooManyAttempts(TooManyAttemptsException ex,
                                                                HttpServletRequest request) {
-        ProblemDetail problem = problem(HttpStatus.TOO_MANY_REQUESTS, "Muitas tentativas de login",
-                "Muitas tentativas de login. Tente novamente mais tarde.", request);
+        ProblemDetail problem = problem(HttpStatus.TOO_MANY_REQUESTS, "Muitas tentativas",
+                "Muitas tentativas. Tente novamente mais tarde.", request);
         problem.setProperty("code", "TOO_MANY_ATTEMPTS");
         return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
                 .header(HttpHeaders.RETRY_AFTER, String.valueOf(ex.getRetryAfterSeconds()))
