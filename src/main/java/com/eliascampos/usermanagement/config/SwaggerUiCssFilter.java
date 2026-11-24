@@ -16,11 +16,55 @@ import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
 
 /**
- * Injeta a folha de estilo propria no HTML do Swagger UI. O buffer evita o conflito
- * entre getOutputStream() e getWriter() que ocorre com o ContentCachingResponseWrapper.
+ * Injeta no HTML do Swagger UI a folha de estilo propria, o meta description e um
+ * ajuste progressivo de acessibilidade (rotulo do seletor de servidor e ordem de titulos).
+ * O buffer evita o conflito entre getOutputStream() e getWriter() do ContentCachingResponseWrapper.
  */
 @Component
 public class SwaggerUiCssFilter extends OncePerRequestFilter {
+
+    private static final String HEAD_INJECTION = """
+            <meta name="description" content="API de gerenciamento de usuarios com JWT, auditoria e demo publica somente leitura.">
+            <script>
+            (function () {
+              function enhance() {
+                var select = document.getElementById('servers');
+                if (select && !select.hasAttribute('aria-label')) {
+                  select.setAttribute('aria-label', 'Servidor');
+                }
+                var theme = document.querySelector('.topbar button');
+                if (theme && !(theme.textContent || '').trim() && !theme.hasAttribute('aria-label')) {
+                  theme.setAttribute('aria-label', 'Alternar tema');
+                }
+                var firstTag = document.querySelector('.opblock-tag-section');
+                if (firstTag && !document.getElementById('lg-operations-heading')) {
+                  var heading = document.createElement('h2');
+                  heading.id = 'lg-operations-heading';
+                  heading.className = 'lg-visually-hidden';
+                  heading.textContent = 'Operacoes da API';
+                  firstTag.parentNode.insertBefore(heading, firstTag);
+                }
+                return Boolean(firstTag && select);
+              }
+              function run() {
+                if (enhance() && observer) {
+                  observer.disconnect();
+                }
+              }
+              var observer = window.MutationObserver ? new MutationObserver(run) : null;
+              if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', run);
+              } else {
+                run();
+              }
+              window.addEventListener('load', run);
+              if (observer) {
+                observer.observe(document.documentElement, { childList: true, subtree: true });
+              }
+            })();
+            </script>
+            <link rel="stylesheet" type="text/css" href="/swagger-custom.css">
+            """;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
@@ -39,8 +83,7 @@ public class SwaggerUiCssFilter extends OncePerRequestFilter {
         String text = new String(body, StandardCharsets.UTF_8);
 
         if (text.contains("</head>") && !text.contains("swagger-custom.css")) {
-            text = text.replace("</head>",
-                    "<link rel=\"stylesheet\" type=\"text/css\" href=\"/swagger-custom.css\"></head>");
+            text = text.replace("</head>", HEAD_INJECTION + "</head>");
             byte[] bytes = text.getBytes(StandardCharsets.UTF_8);
             response.setContentType("text/html;charset=UTF-8");
             response.setContentLength(bytes.length);

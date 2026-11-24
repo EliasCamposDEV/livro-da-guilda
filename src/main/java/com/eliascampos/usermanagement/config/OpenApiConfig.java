@@ -41,13 +41,15 @@ public class OpenApiConfig {
                                 3. Clique em **Authorize** e cole apenas o token (sem o prefixo `Bearer`).
                                 4. Expanda um endpoint, ajuste os parâmetros e clique em **Execute**.
 
-                                - Leitura funciona; escrita (POST/PUT/PATCH/DELETE em `/api/v1/**`) e recuperação de senha retornam `403 READ_ONLY_DEMO`.
+                                - Leitura funciona; escrita e recuperação de senha estão bloqueadas nesta demo.
                                 - Em dev, o token de recuperação aparece no log com o marcador `PASSWORD_RESET_TOKEN`. Em prod, sem provedor de e-mail, o endpoint responde `503 PASSWORD_RESET_UNAVAILABLE`.
                                 - A instância gratuita hiberna; o primeiro acesso pode levar 30-60 s.
                                 - Em execução local, use o admin criado no primeiro start (veja o README).
 
-                                **Limites:** `/auth/login` bloqueia após 5 tentativas erradas por e-mail + IP em 15 min (429).
-                                `/auth/forgot-password` aceita 5 solicitações por e-mail + IP e 20 por IP a cada hora (429).""")
+                                **Limites:** `/auth/login` aceita 5 tentativas por e-mail + IP e 30 por IP em 15 min.
+                                `/auth/forgot-password` aceita 5 por e-mail + IP, 20 por IP e 10 por conta em 1 h.
+                                `/auth/refresh` aceita 30 tentativas por IP por minuto.
+                                Ao exceder, a API responde `429 TOO_MANY_ATTEMPTS`.""")
                         .version("1.0.0")
                         .contact(new Contact()
                                 .name("Elias Campos")
