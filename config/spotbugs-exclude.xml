@@ -16,7 +16,7 @@
   -->
   <Match>
     <Bug code="EI,EI2"/>
-    <Class name="~com\.eliascampos\.usermanagement\.(audit\.AuditService|auth\.AuthController|auth\.PasswordResetService|config\.ApplicationDatabaseHealthIndicator|config\.IndexMigration|config\.SwaggerUiCssFilter\$BufferingResponseWrapper|security\.AppUserDetails|security\.DemoReadOnlyFilter|security\.JwtService|user\.MeController|user\.UserController|user\.UserService|user\.UserVersionMigration)"/>
+    <Class name="~com\.eliascampos\.usermanagement\.(audit\.AuditService|auth\.AuthController|auth\.LoginRateLimiter|auth\.PasswordResetRateLimiter|auth\.PasswordResetService|auth\.RedisRateLimitStore|auth\.RefreshRateLimiter|config\.ApplicationDatabaseHealthIndicator|config\.IndexMigration|config\.SwaggerUiCssFilter\$BufferingResponseWrapper|security\.AppUserDetails|security\.DemoReadOnlyFilter|security\.JwtService|user\.MeController|user\.UserController|user\.UserService|user\.UserVersionMigration)"/>
   </Match>
   <Match>
     <Bug pattern="CT_CONSTRUCTOR_THROW"/>

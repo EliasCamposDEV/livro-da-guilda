@@ -1,105 +1,65 @@
 package com.eliascampos.usermanagement.auth;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
-import java.time.Instant;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Janela fixa de tentativas de login por chave (e-mail + IP), em memoria.
- * Por instancia: com mais de uma replica cada uma conta separadamente.
+ * Janela fixa de tentativas de login por chave (e-mail + IP) e por IP.
+ * Os contadores ficam no RateLimitStore: locais por padrao, compartilhados no Redis.
  */
 @Component
 public class LoginRateLimiter {
 
     static final int MAX_ATTEMPTS = 5;
     static final Duration WINDOW = Duration.ofMinutes(15);
-    private static final int MAX_TRACKED_KEYS = 10_000;
-
-    private final Map<String, Attempts> attempts = new ConcurrentHashMap<>();
-    private final Map<String, Object> locks = new ConcurrentHashMap<>();
-    private final Map<String, Attempts> ipAttempts = new ConcurrentHashMap<>();
     private static final int MAX_PER_IP = 30;
 
+    private final RateLimitStore store;
+    private final Map<String, Object> locks = new ConcurrentHashMap<>();
+
+    @Autowired
+    public LoginRateLimiter(RateLimitStore store) {
+        this.store = store;
+    }
+
     public void check(String key) {
-        Attempts current = attempts.get(key);
-        if (current != null && !current.expired() && current.count() >= MAX_ATTEMPTS) {
+        if (store.get("login:" + key, WINDOW).count() >= MAX_ATTEMPTS) {
             throw new TooManyAttemptsException(WINDOW);
         }
     }
 
     public void recordFailure(String key) {
-        evictIfNeeded();
-        attempts.compute(key, (ignored, previous) -> previous == null || previous.expired()
-                ? new Attempts(Instant.now(), 1)
-                : new Attempts(previous.start(), previous.count() + 1));
-        locks.computeIfAbsent(key, k -> new Object());
+        store.increment("login:" + key, WINDOW);
+        locks.computeIfAbsent(key, ignored -> new Object());
     }
 
     public void reset(String key) {
-        attempts.remove(key);
+        store.reset("login:" + key);
         locks.remove(key);
     }
 
     public void checkIp(String ip) {
-        Attempts current = ipAttempts.get(ip);
-        if (current != null && !current.expired() && current.count() >= MAX_PER_IP) {
+        if (store.get("login-ip:" + ip, WINDOW).count() >= MAX_PER_IP) {
             throw new TooManyAttemptsException(WINDOW);
         }
     }
 
     public void recordFailureIp(String ip) {
-        ipAttempts.compute(ip, (ignored, previous) ->
-                previous == null || previous.expired()
-                        ? new Attempts(Instant.now(), 1)
-                        : new Attempts(previous.start(), previous.count() + 1));
+        store.increment("login-ip:" + ip, WINDOW);
     }
 
     /** Retorna um lock por chave para serializar check/record/reset e evitar corrida. */
     public Object lock(String key) {
-        return locks.computeIfAbsent(key, k -> new Object());
+        return locks.computeIfAbsent(key, ignored -> new Object());
     }
 
     /** Zera o estado; usado pelos testes para isolar cenarios. */
     public void clear() {
-        attempts.clear();
+        store.clear();
         locks.clear();
-    }
-
-    private void evictIfNeeded() {
-        if (attempts.size() < MAX_TRACKED_KEYS) {
-            return;
-        }
-
-        attempts.entrySet().removeIf(entry -> entry.getValue().expired());
-        locks.keySet().removeIf(key -> {
-            Attempts current = attempts.get(key);
-            return current == null || current.expired();
-        });
-
-        if (attempts.size() < MAX_TRACKED_KEYS) {
-            return;
-        }
-
-        // Eviccao LRU aproximada por idade: remove as entradas mais antigas em
-        // vez de zerar todos os contadores, preservando o bloqueio dos demais.
-        java.util.List<String> oldest = attempts.entrySet().stream()
-                .sorted(java.util.Comparator.comparing(entry -> entry.getValue().start()))
-                .limit(Math.max(1, attempts.size() / 5))
-                .map(java.util.Map.Entry::getKey)
-                .toList();
-        oldest.forEach(key -> {
-            attempts.remove(key);
-            locks.remove(key);
-        });
-    }
-
-    private record Attempts(Instant start, int count) {
-
-        boolean expired() {
-            return start.plus(WINDOW).isBefore(Instant.now());
-        }
     }
 }

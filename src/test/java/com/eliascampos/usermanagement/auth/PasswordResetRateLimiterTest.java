@@ -13,7 +13,7 @@ class PasswordResetRateLimiterTest {
 
     @BeforeEach
     void setUp() {
-        rateLimiter = new PasswordResetRateLimiter();
+        rateLimiter = new PasswordResetRateLimiter(new LocalRateLimitStore());
     }
 
     @Test

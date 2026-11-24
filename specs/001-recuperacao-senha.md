@@ -37,7 +37,7 @@ Permitir que o usuario solicite a redefinicao de senha e defina uma nova senha c
 - RNF4: `Clock` injetavel no servico para testar expiracao sem esperar 15 minutos.
 - RNF5: Rate limit no forgot-password em duas dimensoes: 5 por hora por `email + IP` e 20 por hora por IP. Toda solicitacao conta, inclusive para e-mail inexistente ou inativo, para nao criar um oraculo de existencia. Excedeu: `429 TOO_MANY_ATTEMPTS` com `Retry-After`.
 - RNF6: A mensagem do 429 nao pode falar em "login" neste endpoint. Usar texto neutro, por exemplo "Muitas solicitacoes. Tente novamente mais tarde."
-- RNF7: O rate limit e em memoria e por instancia, como o do login. Aplicar limpeza de chaves expiradas e limite de chaves para evitar crescimento sem controle. Em mais de uma replica, cada uma conta separadamente (ver Limitacoes).
+- RNF7: O rate limit usa o `RateLimitStore` compartilhado com login e refresh. Padrao em memoria; com `APP_RATE_LIMIT_REDIS_ENABLED=true`, os contadores ficam no Redis. Aplicar limpeza de chaves expiradas e limite de chaves para evitar crescimento sem controle.
 - RNF8: O endpoint de reset nao precisa de rate limit proprio: o token tem 256 bits e o BCrypt so e pago depois de o token ser validado. Erros de validacao do corpo sao rejeitados antes do consumo.
 - RNF9: Swagger documenta os dois endpoints, os corpos, os status 204, 400, 403, 429 e 503, com exemplos reais. Nenhum schema de resposta inclui token. A descricao da demo deve incluir as rotas de recuperacao, e o exemplo de 429 nao pode falar em login.
 - RNF10: Testes de integracao rodam com MongoDB embarcado (dev/test) e Testcontainers (2 testes de integracao) e `mvn verify` no CI.
@@ -160,7 +160,7 @@ Sem migracao: documentos antigos ficam sem os campos e o indice esparso aceita v
 - [x] README explica como obter o token no log em dev e por que a demo retorna 403.
 
 ## Limitacoes e riscos
-- Rate limit em memoria: com mais de uma replica, cada instancia tem sua propria janela. Redis ou outro store compartilhado fica para quando houver escala horizontal.
+- Rate limit em memoria por padrao: sem Redis, cada replica tem sua propria janela. Com Redis habilitado, os contadores sao compartilhados.
 - Access tokens continuam validos por ate 1 h apos o reset. Revogacao imediata exigiria checar `tokenVersion` em cada access token, o que e uma mudanca separada.
 - O canal `log` grava o token bruto. Ele existe apenas em dev/test e nunca deve ser ligado em prod. Logs de dev precisam de controle de acesso.
 - Sem e-mail real, a feature nao atende usuarios finais em prod; o 503 e proposital e evita prometer o que nao existe.

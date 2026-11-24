@@ -206,3 +206,4 @@ O `mvn verify` também roda o SpotBugs com limite `Medium` e falha em qualquer a
 
 - E-mail é normalizado para minúsculas e protegido por índice único.
 - Os índices são criados na subida por `IndexMigration`, com a versão registrada em `schema_migrations`. O `auto-index-creation` está desligado.
+- Rate limits são locais por padrão. Com `APP_RATE_LIMIT_REDIS_ENABLED=true` e `APP_RATE_LIMIT_REDIS_URI`, login, refresh e recuperação de senha compartilham os contadores no Redis.

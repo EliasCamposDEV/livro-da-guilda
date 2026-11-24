@@ -73,12 +73,16 @@ Fazer isso se houver suspeita de vazamento ou a cada ciclo de rotação definido
 
 ## Limites conhecidos
 
-- **Rate limit do login** é em memória: 5 tentativas por e-mail + IP em 15 minutos, por
-  instância. Com mais de uma réplica o limite é por réplica.
-- **Rate limit da recuperação de senha** é em memória: 5 solicitações por e-mail + IP
-  e 20 por IP, em janela de 1 hora, por instância. Toda solicitação conta, inclusive
+- **Rate limit do login**: 5 tentativas por e-mail + IP em 15 minutos.
+- **Rate limit da recuperação de senha**: 5 solicitações por e-mail + IP
+  e 20 por IP, em janela de 1 hora. Toda solicitação conta, inclusive
   para e-mail inexistente. Tambem ha limite de 10 solicitacoes por conta (e-mail).
-- **Rate limit do refresh** e em memoria: 30 tentativas por IP por minuto, por instancia.
+- **Rate limit do refresh**: 30 tentativas por IP por minuto.
+- Por padrão os contadores são locais, um por instância. Para mais de uma réplica,
+  defina `APP_RATE_LIMIT_REDIS_ENABLED=true` e `APP_RATE_LIMIT_REDIS_URI=redis://host:6379`
+  (opcionalmente com `:senha` e `/db`). Os três limiters passam a compartilhar os
+  contadores no Redis, com `INCR` e TTL atomics. Sem essas variaveis a demo continua
+  funcionando sem Redis.
 - **Refresh token**: rotativo e de sessão única por usuário (ver README). Não há
   revogação por dispositivo.
 - **CORS**: desligado por padrão; libere só as origens que consomem a API.

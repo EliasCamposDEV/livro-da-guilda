@@ -81,3 +81,7 @@ app:
       delivery: ${PASSWORD_RESET_DELIVERY:none}
       token-ttl: ${PASSWORD_RESET_TOKEN_TTL:PT15M}
     single-session: ${APP_SINGLE_SESSION:true}
+  rate-limit:
+    # Padrao local. Com mais de uma instancia, habilite e aponte para um Redis compartilhado.
+    redis-enabled: ${APP_RATE_LIMIT_REDIS_ENABLED:false}
+    redis-uri: ${APP_RATE_LIMIT_REDIS_URI:}
