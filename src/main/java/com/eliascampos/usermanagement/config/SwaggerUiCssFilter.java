@@ -39,9 +39,15 @@ public class SwaggerUiCssFilter extends OncePerRequestFilter {
                 if (select && !select.hasAttribute('aria-label')) {
                   select.setAttribute('aria-label', 'Servidor');
                 }
-                var theme = document.querySelector('.dark-mode-toggle button, .topbar button');
-                if (theme && !hasName(theme)) {
-                  theme.setAttribute('aria-label', 'Alternar tema');
+                var themes = document.querySelectorAll('.dark-mode-toggle button');
+                for (var i = 0; i < themes.length; i++) {
+                  if (!hasName(themes[i])) {
+                    themes[i].setAttribute('aria-label', 'Alternar tema');
+                  }
+                }
+                var logo = document.querySelector('.topbar a.link:not([href])');
+                if (logo) {
+                  logo.setAttribute('href', '/');
                 }
                 var main = document.querySelector('.swagger-ui');
                 if (main) {
@@ -70,8 +76,10 @@ public class SwaggerUiCssFilter extends OncePerRequestFilter {
                   heading.textContent = 'Operacoes da API';
                   firstTag.parentNode.insertBefore(heading, firstTag);
                 }
-                return Boolean(firstTag && select && theme && main &&
-                  document.querySelector('.swagger-ui__skip-link'));
+                return Boolean(firstTag && select && main && themes.length &&
+                  document.querySelector('.swagger-ui__skip-link') &&
+                  !document.querySelector('.dark-mode-toggle button:not([aria-label])') &&
+                  !document.querySelector('.topbar a.link:not([href])'));
               }
               function run() {
                 if (enhance() && observer) {
