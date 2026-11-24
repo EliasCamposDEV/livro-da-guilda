@@ -15,10 +15,12 @@ O bootstrap de admin só roda fora dos perfis `dev`, `test` e `demo`, só quando
 está vazio e só se as duas variáveis estiverem preenchidas. Depois de criar o primeiro
 admin, remova as variáveis do ambiente.
 
-No `docker compose`, os dois valores já vêm preenchidos para uso local
-(`admin@local.dev` / `admin12345`, sobrescreva com `BOOTSTRAP_ADMIN_EMAIL` e
-`BOOTSTRAP_ADMIN_PASSWORD`). Fora do Compose, sem eles a API sobe e não há como logar
-em um banco vazio, porque criar usuários exige um `ADMIN`.
+No `docker compose`, as variáveis do container são `APP_BOOTSTRAP_ADMIN_EMAIL` e
+`APP_BOOTSTRAP_ADMIN_PASSWORD`, preenchidas a partir de `BOOTSTRAP_ADMIN_EMAIL` e
+`BOOTSTRAP_ADMIN_PASSWORD` do `.env`. O `.env.example` traz esses valores vazios;
+preencha-os antes da primeira subida se quiser criar o primeiro `ADMIN`. Fora do
+Compose, sem `APP_BOOTSTRAP_ADMIN_*` a API sobe, mas não há como logar em um banco
+vazio, porque criar usuários exige um `ADMIN`.
 
 ## Demo pública
 
@@ -67,7 +69,9 @@ Fazer isso se houver suspeita de vazamento ou a cada ciclo de rotação definido
 
 ## Health e observabilidade
 
-- `GET /actuator/health` é público e não expõe detalhes em prod; use o `Liveness`/`Readiness` do orquestrador.
+- `GET /actuator/health` é público e não expõe detalhes em prod. Os grupos
+  `/actuator/health/liveness` e `/actuator/health/readiness` existem, mas o
+  `render.yaml` e o Compose hoje usam apenas o health check simples em `/actuator/health`.
 - `GET /actuator/prometheus` exige token e expõe métricas HTTP, incluindo `http_server_requests_seconds_count`, e o contador `audit.write.failures`.
 - Toda resposta traz `X-Request-Id`; o mesmo valor vai no MDC `requestId` dos logs ECS em JSON no stdout.
 - O compose já tem healthcheck da API e do Mongo.

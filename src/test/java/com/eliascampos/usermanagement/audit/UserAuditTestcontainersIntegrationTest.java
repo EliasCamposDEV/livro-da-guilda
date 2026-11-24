@@ -169,6 +169,8 @@ class UserAuditTestcontainersIntegrationTest {
 
     @Test
     void searchMigrationBackfillsLegacyNames() {
+        mongoTemplate.getCollection("schema_migrations")
+                .deleteOne(new Document("_id", "002-busca-ordem"));
         mongoTemplate.getCollection("usuarios").insertOne(new Document("_id", "legacy-1")
                 .append("name", "Legado Antigo")
                 .append("email", "legado@email.com"));
@@ -179,6 +181,20 @@ class UserAuditTestcontainersIntegrationTest {
                 .find(new Document("_id", "legacy-1")).first();
         assertThat(legacy).isNotNull();
         assertThat(legacy.getString("nameNormalized")).isEqualTo("legado antigo");
+    }
+
+    @Test
+    void searchMigrationSkipsWhenVersionIsAlreadyApplied() {
+        mongoTemplate.getCollection("usuarios").insertOne(new Document("_id", "legacy-2")
+                .append("name", "Legado Ignorado")
+                .append("email", "ignorado@email.com"));
+
+        new com.eliascampos.usermanagement.config.SearchIndexMigration(mongoTemplate).run(null);
+
+        Document legacy = mongoTemplate.getCollection("usuarios")
+                .find(new Document("_id", "legacy-2")).first();
+        assertThat(legacy).isNotNull();
+        assertThat(legacy.getString("nameNormalized")).isNull();
     }
 
     @Test

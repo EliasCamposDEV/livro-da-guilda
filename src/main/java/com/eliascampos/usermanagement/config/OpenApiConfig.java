@@ -149,8 +149,8 @@ public class OpenApiConfig {
                                     "TOO_MANY_ATTEMPTS", path, null));
                         } else {
                             problem.addExamples("muitasTentativas", problemExample(
-                                    "Muitas tentativas", 429, "Muitas tentativas de login",
-                                    "Muitas tentativas de login. Tente novamente mais tarde.",
+                                    "Muitas tentativas", 429, "Muitas tentativas",
+                                    "Muitas tentativas. Tente novamente mais tarde.",
                                     "TOO_MANY_ATTEMPTS", path, null));
                         }
                     }

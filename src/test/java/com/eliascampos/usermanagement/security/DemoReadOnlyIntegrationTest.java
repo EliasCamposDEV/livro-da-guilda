@@ -30,7 +30,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * Liga o modo somente leitura sem o perfil demo (que trocaria o Mongo por um banco real)
  * para validar a regra de ponta a ponta, com a cadeia de seguranca real.
  */
-@SpringBootTest(properties = "app.demo.read-only=true")
+@SpringBootTest(properties = {"app.demo.read-only=true", "app.security.single-session=false"})
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 class DemoReadOnlyIntegrationTest {
@@ -151,6 +151,30 @@ class DemoReadOnlyIntegrationTest {
         mockMvc.perform(post("/auth/logout")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken))
                 .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void shouldKeepSharedRefreshTokensValidWhenSingleSessionDisabled() throws Exception {
+        String loginBody = mockMvc.perform(post("/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                Map.of("email", ADMIN_EMAIL, "password", ADMIN_PASSWORD))))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        String refreshToken = objectMapper.readTree(loginBody).get("refreshToken").asText();
+        int versionBefore = userRepository.findAll().get(0).getTokenVersion();
+
+        for (int i = 0; i < 2; i++) {
+            mockMvc.perform(post("/auth/refresh")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(Map.of("refreshToken", refreshToken))))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.accessToken").isNotEmpty());
+        }
+
+        assertEquals(versionBefore, userRepository.findAll().get(0).getTokenVersion());
     }
 
     private String login() throws Exception {

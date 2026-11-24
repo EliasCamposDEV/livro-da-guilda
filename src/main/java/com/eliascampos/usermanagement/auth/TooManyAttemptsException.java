@@ -7,7 +7,7 @@ public class TooManyAttemptsException extends RuntimeException {
     private final long retryAfterSeconds;
 
     public TooManyAttemptsException(Duration window) {
-        super("Muitas tentativas de login");
+        super("Muitas tentativas");
         this.retryAfterSeconds = window.toSeconds();
     }
 

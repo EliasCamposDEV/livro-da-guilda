@@ -5,10 +5,9 @@
 spring:
   autoconfigure:
     exclude: de.flapdoodle.embed.mongo.spring.autoconfigure.EmbeddedMongoAutoConfiguration
-  data:
-    mongodb:
-      # Sem valor padrao: a aplicacao falha ao subir se MONGODB_URI nao existir.
-      uri: ${MONGODB_URI}
+  mongodb:
+    # Sem valor padrao: a aplicacao falha ao subir se MONGODB_URI nao existir.
+    uri: ${MONGODB_URI}
 
 # Atras do proxy do Render: respeita X-Forwarded-For/Proto (IP real no rate limit do login).
 server:

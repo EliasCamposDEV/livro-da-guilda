@@ -86,13 +86,15 @@ public class AuthController {
     @PostMapping("/login")
     public TokenResponse login(@Valid @RequestBody LoginRequest request, HttpServletRequest httpRequest) {
         String ip = httpRequest.getRemoteAddr() == null ? "unknown" : httpRequest.getRemoteAddr();
-        String key = request.email().trim().toLowerCase(Locale.ROOT) + "@" + ip;
-        synchronized (loginRateLimiter.lock(key)) {
+        String emailKey = request.email().trim().toLowerCase(Locale.ROOT);
+        String key = emailKey + "@" + ip;
+        // Serializa por conta: logins do mesmo usuario em IPs diferentes nao devem gerar 409.
+        synchronized (loginRateLimiter.lock(emailKey)) {
             try {
                 loginRateLimiter.check(key);
                 loginRateLimiter.checkIp(ip);
             } catch (TooManyAttemptsException ex) {
-                auditService.recordForActor(AuditAction.RATE_LIMITED, "system", null, request.email().trim().toLowerCase(Locale.ROOT),
+                auditService.recordForActor(AuditAction.RATE_LIMITED, "system", null, emailKey,
                         Map.of("endpoint", "login"));
                 throw ex;
             }
@@ -104,7 +106,7 @@ public class AuthController {
             } catch (AuthenticationException ex) {
                 loginRateLimiter.recordFailure(key);
                 loginRateLimiter.recordFailureIp(ip);
-                auditService.recordForActor(AuditAction.LOGIN_FAILED, "system", null, request.email().trim().toLowerCase(Locale.ROOT),
+                auditService.recordForActor(AuditAction.LOGIN_FAILED, "system", null, emailKey,
                         Map.of("reason", ex.getClass().getSimpleName()));
                 throw ex;
             }
@@ -113,7 +115,7 @@ public class AuthController {
                 loginRateLimiter.recordFailure(key);
                 loginRateLimiter.recordFailureIp(ip);
                 auditService.recordForActor(AuditAction.LOGIN_FAILED, "system", null,
-                        request.email().trim().toLowerCase(Locale.ROOT),
+                        emailKey,
                         Map.of("reason", "PRINCIPAL_INVALID"));
                 throw new BadCredentialsException("Principal invalido");
             }
@@ -162,7 +164,7 @@ public class AuthController {
         String key = "refresh:" + (servletRequest.getRemoteAddr() == null ? "unknown" : servletRequest.getRemoteAddr());
         refreshRateLimiter.check(key);
         try {
-            TokenResponse response = jwtService.refresh(request.refreshToken());
+            TokenResponse response = jwtService.refresh(request.refreshToken(), singleSession);
             refreshRateLimiter.record(key);
             return response;
         } catch (RuntimeException ex) {

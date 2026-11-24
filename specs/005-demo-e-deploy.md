@@ -100,4 +100,4 @@ Prover perfil `demo` com dados fictícios e bloqueio de escrita, landing page re
 ## Decisões
 - Demo somente leitura por design: permite compartilhar link sem risco.
 - Dados fictícios com mesma senha: simplifica a experiência do visitante.
-- Swagger habilitado em todos os perfis: facilita exploração.
+- Swagger habilitado em `dev` e `demo`; desabilitado em `prod` por decisão de segurança.
